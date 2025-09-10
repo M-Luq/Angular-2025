@@ -1,0 +1,46 @@
+<div>
+    <button (click)="onSelectUser()">
+        <!--
+          [src] is an example of "Property Binding". We are binding to the `src`
+          property of the `img` DOM element.
+
+          Why not use string interpolation like this?
+          <img src="assets/users/{{selectedUser.avatar}}" ... >
+
+          If you use string interpolation, the browser will initially try to
+          request an image at the literal path "assets/users/{{selectedUser.avatar}}",
+          which will result in a 404 Not Found error in the browser console.
+
+          By using property binding, Angular evaluates the expression and sets the
+          `src` property only when it has the final, correct image path. This
+          avoids the unnecessary and erroneous initial request.
+
+          ---
+
+          ### Attribute Binding
+
+          While property binding (`[property]`) is most common, sometimes you need to
+          bind directly to an HTML *attribute*, especially for attributes that don't
+          have a corresponding DOM property. A key example is ARIA attributes for
+          accessibility.
+
+          The syntax uses an `attr.` prefix: `[attr.attribute-name]="value"`.
+
+          Example:
+          Imagine a progress bar where you need to set ARIA attributes for screen readers.
+
+          <div
+            role="progressbar"
+            [attr.aria-valuenow]="currentProgress"
+            [attr.aria-valuemax]="100">
+          </div>
+        -->
+        <!--
+          The `imagePath` property comes from a "getter" in the component's
+          TypeScript file. This keeps the logic for constructing the URL out of
+          the template, making the HTML cleaner and easier to maintain.
+        -->
+        <img [src]="imagePath" [alt]="selectedUser.name" />
+        <span>{{selectedUser.name}}</span>
+    </button>
+</div>
