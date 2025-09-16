@@ -1,7 +1,11 @@
-import { Component } from '@angular/core';
-import { DUMMY_USERS } from '../dummy-users';
+import { Component, EventEmitter, Input ,input, Output } from '@angular/core';
 
-const randomIndex = Math.floor(Math.random() * DUMMY_USERS.length)
+interface User {
+  id: string;
+  name: string;
+  avatar: string;
+}
+
 
 @Component({
   selector: 'app-user',
@@ -11,25 +15,16 @@ const randomIndex = Math.floor(Math.random() * DUMMY_USERS.length)
   styleUrl: './user.component.css'
 })
 export class UserComponent {
-  selectedUser = DUMMY_USERS[randomIndex];
-  
-  // This is a "getter" property.
-  // It's a special kind of property that is computed on-the-fly whenever it's accessed,
-  // rather than being stored as a static value.
-  //
-  // Why use a getter here?
-  // It helps to keep the component's template clean. Instead of constructing the
-  // image path directly in the HTML, we centralize the logic here. If the path
-  // structure ever changes, we only need to update it in this one place.
+  @Input({required:true}) user!: User;
+
+  @Output() select = new EventEmitter<string>();
+
   get imagePath(){
-    // This constructs the full path to the user's avatar image.
-    // It uses a template literal (the backticks ``) to combine the base path
-    // with the avatar filename from the selectedUser object.
-    return `assets/users/${this.selectedUser.avatar}`
+    return `assets/users/${this.user.avatar}`;
   }
 
   onSelectUser(){
-    const randomIndex = Math.floor(Math.random() * DUMMY_USERS.length)
-    this.selectedUser = DUMMY_USERS[randomIndex];
+    this.select.emit(this.user.id);
   }
+
 }

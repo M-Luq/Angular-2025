@@ -1,0 +1,709 @@
+Day 1-
+
+// main.ts is the main entry point for the Angular application. It's the very
+// first code that runs when someone visits the web page.
+
+// This line imports the `bootstrapApplication` function from one of Angular's
+// core libraries, `@angular/platform-browser`. This function is specifically
+// designed to start (or "bootstrap") an Angular application in a web browser
+// environment.
+import { bootstrapApplication } from '@angular/platform-browser';
+
+// This imports the application's root component, named `AppComponent`, from the
+// `app.component.ts` file. The `AppComponent` is the main component that acts
+// as the container for all other components and views in your application.
+import { AppComponent } from './app/app.component';
+
+// This is the most important line in the file. It calls the function we
+// imported earlier and tells it to launch the application using `AppComponent`
+// as the root. When this function runs, Angular creates an application instance
+// and renders the `AppComponent`'s template inside the `<app-root>` element
+// in `index.html`.
+bootstrapApplication(AppComponent)
+  // The `bootstrapApplication` function returns a JavaScript `Promise`. This
+  // `.catch()` block is attached to that promise to handle any errors that
+  // might occur during the application startup process. If something goes
+  // wrong, the error will be caught and printed to the browser's developer
+  // console.
+  .catch((err) => console.error(err));
+
+Day2
+
+<div>
+    <button (click)="onSelectUser()">
+        <!--
+          [src] is an example of "Property Binding". We are binding to the `src`
+          property of the `img` DOM element.
+
+          Why not use string interpolation like this?
+          <img src="assets/users/{{selectedUser.avatar}}" ... >
+
+          If you use string interpolation, the browser will initially try to
+          request an image at the literal path "assets/users/{{selectedUser.avatar}}",
+          which will result in a 404 Not Found error in the browser console.
+
+          By using property binding, Angular evaluates the expression and sets the
+          `src` property only when it has the final, correct image path. This
+          avoids the unnecessary and erroneous initial request.
+
+          ---
+
+          ### Attribute Binding
+
+          While property binding (`[property]`) is most common, sometimes you need to
+          bind directly to an HTML *attribute*, especially for attributes that don't
+          have a corresponding DOM property. A key example is ARIA attributes for
+          accessibility.
+
+          The syntax uses an `attr.` prefix: `[attr.attribute-name]="value"`.
+
+          Example:
+          Imagine a progress bar where you need to set ARIA attributes for screen readers.
+
+          <div
+            role="progressbar"
+            [attr.aria-valuenow]="currentProgress"
+            [attr.aria-valuemax]="100">
+          </div>
+        -->
+        <!--
+          The `imagePath` property comes from a "getter" in the component's
+          TypeScript file. This keeps the logic for constructing the URL out of
+          the template, making the HTML cleaner and easier to maintain.
+        -->
+        <img [src]="imagePath" [alt]="selectedUser.name" />
+        <span>{{selectedUser.name}}</span>
+    </button>
+</div>
+
+// This is a "getter" property.
+  // It's a special kind of property that is computed on-the-fly whenever it's accessed,
+  // rather than being stored as a static value.
+  //
+  // Why use a getter here?
+  // It helps to keep the component's template clean. Instead of constructing the
+  // image path directly in the HTML, we centralize the logic here. If the path
+  // structure ever changes, we only need to update it in this one place.
+  get imagePath(){
+    // This constructs the full path to the user's avatar image.
+    // It uses a template literal (the backticks ``) to combine the base path
+    // with the avatar filename from the selectedUser object.
+    return `assets/users/${this.selectedUser.avatar}`
+  }
+
+Day 3
+
+Zone.js > angular 2 vs signals >angular 12
+
+### What is Zone.js? (The "Magic" of Angular 2+)
+
+Think of Zone.js as a tool that gives Angular a superpower: the ability to know when *anything* might have happened that could require updating the screen.
+
+It works by "monkey-patching" almost all common browser asynchronous APIs, such as:
+*   `setTimeout()` and `setInterval()`
+*   DOM events like `(click)` or `(keydown)`
+*   `fetch()` and `XMLHttpRequest` for making HTTP requests
+
+When you use any of these APIs in your Angular application, Zone.js creates an execution context (a "zone"). When the async task finishes (e.g., your `setTimeout` callback runs or your button click handler executes), Zone.js emits an event. Angular listens for this event and says, "Something happened! I'd better check the entire component tree for changes and update the UI if needed."
+
+**In a nutshell:**
+
+*   **Trigger:** Any standard async browser event.
+*   **Action:** Angular runs its change detection mechanism from the top of the application down.
+*   **Benefit:** It feels automatic. You change a property in a click handler, and the template updates without you having to do anything special. This made early Angular versions very approachable.
+*   **Drawback:** It's a "heavy hammer." Even if your async task didn't change any data bound to the template, change detection still runs, which can lead to performance issues in large or complex applications.
+
+### What are Signals? (The Future of Angular 16+)
+
+Signals are a new, fine-grained reactive system. Instead of watching for *any* potential change in the application, Signals allow Angular to know *exactly* what changed and *only* update the parts of the UI that care about that specific piece of data.
+
+A Signal is a wrapper around a value that can notify interested consumers when that value changes.
+
+1.  **Create a Signal:** You explicitly create a signal to hold a value.
+    ```typescript
+    import { signal } from '@angular/core';
+
+    // In your component
+    count = signal(0); // A signal holding the value 0
+    ```
+
+2.  **Read the Value:** You read the value by calling the signal as a function. When you do this inside a component's template, Angular automatically creates a dependency.
+    ```html
+    <!-- In your template -->
+    <p>Current count: {{ count() }}</p>
+    ```
+
+3.  **Update the Value:** You change the value using the `.set()` or `.update()` methods.
+    ```typescript
+    // In a component method
+    increment() {
+      this.count.update(currentValue => currentValue + 1);
+    }
+    ```
+
+When `this.count.update()` is called, the signal notifies its consumers. Angular sees that the `<p>` tag in your template depends on `count`, so it efficiently updates just that part of the DOM. It doesn't need to check any other components.
+
+### The Big Difference: Zone.js vs. Signals
+
+| Feature | Zone.js (Classic Angular) | Signals (Modern/Zoneless Angular) |
+| :--- | :--- | :--- |
+| **How it works** | Monkey-patches browser APIs to detect when *anything* might have happened. | Creates a precise dependency graph. Knows exactly what data has changed. |
+| **Trigger** | Automatic, on any async event (clicks, timers, HTTP). | Explicit, when you call `.set()` or `.update()` on a signal. |
+| **Change Detection** | Coarse-grained. Triggers a check of the entire component tree (or a large part of it). | Fine-grained. Only updates the specific parts of the view that depend on the changed signal. |
+| **Performance** | Can be less performant, as it may run unnecessary checks. | Highly performant, as it does no extra work. |
+| **Developer Experience** | "Magical" and implicit. Can be hard to debug performance issues. | Explicit and predictable. You know exactly what causes a UI update. |
+
+Your note `Zone.js > angular 2 vs signals >angular 12` perfectly captures this evolution. While Zone.js was foundational to Angular 2 and beyond, the framework is now moving towards a future where Zone.js is optional, with Signals being the primary mechanism for creating fast, modern, and easy-to-reason-about applications.
+
+### Working with Signals: Create, Read, and Update
+
+Here's a more detailed look at the core operations for using signals.
+
+#### 1. Creating Signals
+
+You create a signal using the `signal()` function from `@angular/core`. It can hold any kind of data.
+
+**For primitive values (string, number, boolean):**
+```typescript
+import { signal } from '@angular/core';
+
+// In your component
+taskComplete = signal(false);
+username = signal('Guest');
+```
+
+**For complex values (objects, arrays):**
+```typescript
+import { signal } from '@angular/core';
+
+// An array of strings
+todos = signal(['Learn Signals', 'Build an app']);
+
+// An object
+userProfile = signal({ name: 'Alex', theme: 'dark' });
+```
+
+#### 2. Reading (Getting) Signal Values
+
+To get the current value of a signal, you call it like a function.
+
+```typescript
+// In your component's TypeScript code
+console.log( this.username() ); // Outputs: 'Guest'
+
+const currentTodos = this.todos(); // Gets the array
+```
+
+When you read a signal in a component's template, Angular automatically tracks that this part of the view depends on the signal.
+
+```html
+<!-- In your template -->
+<h2>Welcome, {{ username() }}!</h2>
+<p>Your first todo is: {{ todos()[0] }}</p>
+```
+
+#### 3. Updating Signal Values
+
+There are three main ways to change a signal's value. Choosing the right one is important.
+
+**A) `.set(newValue)`: To completely replace the value.**
+Use `.set()` when you want to overwrite the signal's current value with a brand new one. This is common for primitive types or when replacing an entire object/array.
+
+```typescript
+// In a component method
+login() {
+  this.username.set('Alice');
+  this.taskComplete.set(true);
+}
+
+resetTodos() {
+  // Replace the old array with a new, empty one
+  this.todos.set([]);
+}
+```
+
+**B) `.update(updateFn)`: To compute a new value based on the current one.**
+Use `.update()` when the new value depends on the old value. You provide a function that receives the current value and returns the new one.
+
+```typescript
+// In a component method
+incrementCounter() {
+  // The 'current' value is passed to your function
+  this.count.update(current => current + 1);
+}
+
+addTodo(newTodo: string) {
+  this.todos.update(currentTodos => [...currentTodos, newTodo]);
+}
+```
+
+**C) `.mutate(mutatorFn)`: To change a value inside an object or array.**
+This is a performance optimization. When you have a signal holding an object or an array, `.mutate()` allows you to change a property *inside* that object/array without creating a whole new object/array. This can be more efficient.
+
+```typescript
+// In a component method
+changeTheme() {
+  // No need to create a new userProfile object
+  this.userProfile.mutate(profile => {
+    profile.theme = 'light';
+  });
+}
+
+completeFirstTodo() {
+    this.todos.mutate(currentTodos => {
+        // Directly modify the array
+        if (currentTodos.length > 0) {
+            currentTodos[0] = currentTodos[0] + ' (Completed)';
+        }
+    });
+}
+```
+
+### Deriving Values with `computed()`
+
+A `computed` signal is a special kind of signal that derives its value from other signals. It's read-only and automatically updates whenever any of the signals it depends on change. This is perfect for creating values that are based on other pieces of state.
+
+#### How it Works
+
+You create a computed signal by calling `computed()` with a derivation function. This function should access one or more other signals to calculate its value.
+
+```typescript
+import { signal, computed } from '@angular/core';
+
+// In your component
+firstName = signal('Jane');
+lastName = signal('Doe');
+
+// This computed signal will automatically update
+// when `firstName` or `lastName` changes.
+fullName = computed(() => `${this.firstName()} ${this.lastName()}`);
+
+// Another example: a boolean check
+hasLongName = computed(() => this.fullName().length > 10);
+```
+
+You would then use it in your template just like any other signal:
+
+```html
+<!-- In your template -->
+<h1>Welcome, {{ fullName() }}!</h1>
+
+@if (hasLongName()) {
+  <p>That's a long name!</p>
+}
+```
+
+#### Key Characteristics of `computed()`
+
+1.  **Memoization & Laziness**: A `computed` signal is smart. It only re-runs its calculation function if one of its dependencies has actually changed. If you read a computed signal multiple times, it returns a cached value without re-executing the logic, making it very efficient.
+
+2.  **Read-Only**: You cannot directly change a computed signal with `.set()` or `.update()`. Its value is determined exclusively by its derivation function and the signals it depends on.
+
+3.  **Composability**: You can create computed signals that depend on other computed signals. Angular will manage the entire dependency graph for you, ensuring everything updates efficiently and in the correct order.
+
+### Understanding `@Input({required: true}) name!: string;`
+
+This line of code combines three important concepts in Angular and TypeScript. Let's break it down piece by piece using the `UserComponent` as an example.
+
+#### 1. `@Input()` Decorator: Passing Data Down
+
+*   **What it is:** The `@Input()` decorator marks a component property as an "input". This means its value can be set by a parent component. It's the primary way to pass data *from* a parent component *down to* a child component.
+
+*   **Example (Parent Component Template):**
+    ```html
+    <!-- app.component.html -->
+    <app-user [name]="'Jasmine'" [avatar]="'user-1.jpg'"></app-user>
+    ```
+    In this example, the parent component (`AppComponent`) is passing the string `'Jasmine'` to the `name` input of the child component (`UserComponent`).
+
+#### 2. `required: true`: Making Inputs Mandatory
+
+*   **What it is:** This is an option passed to the `@Input()` decorator (introduced in Angular v16). It tells the Angular compiler that the parent component **must** provide a value for this input.
+
+*   **Why it's useful:** Before this feature, all inputs were optional. If a parent forgot to bind a value (e.g., `<app-user [avatar]="'...'" />`), the `name` property in the child would be `undefined`, which could lead to runtime errors.
+
+    With `required: true`, forgetting to bind the property results in a **compile-time error**, making your application more robust and preventing bugs before they happen.
+
+*   **Example (If you forget to bind):**
+    If you wrote `<app-user></app-user>` in the parent template without binding `[name]` and `[avatar]`, the compiler would show an error like: `Required input 'name' from component UserComponent must be specified.`
+
+#### 3. `!` (Non-Null Assertion Operator): Trusting the Framework
+
+*   **What it is:** This is a TypeScript feature, not specific to Angular. It's a way to tell the TypeScript compiler, "Trust me, I know that this property will not be `null` or `undefined` when it's used, even though you can't see it being initialized."
+
+*   **Why it's needed here:** TypeScript's "strict property initialization" rule requires that all class properties are given a value either where they are declared or in the constructor.
+
+    ```typescript
+    // This would cause a TypeScript error without '!' or an initial value
+    // Error: Property 'name' has no initializer and is not definitely assigned in the constructor.
+    class MyComponent {
+      name: string; // <-- Problem here
+    }
+    ```
+
+    However, an `@Input()` property gets its value from the parent component *after* the constructor runs. Angular's framework is responsible for assigning the value.
+
+    By combining `required: true` (which guarantees to Angular that a value will be passed in) with the `!` operator, we are telling TypeScript to trust that Angular will do its job and initialize the property. This satisfies the strict initialization rule without having to make the property optional (e.g., `name?: string`) or giving it a default value.
+
+### Signal Inputs with the `input()` function
+
+Starting with Angular 17.1, there's a new, more modern way to define component inputs using the `input()` function. This is the preferred way to create inputs in signal-based components.
+
+An `input()` is a special kind of signal whose value is set by a parent component.
+
+#### How to Create Signal Inputs
+
+You create signal inputs by calling the `input()` function and assigning it to a class property.
+
+**1. Optional Input (with a default initial value):**
+This is the most common way. If the parent doesn't provide a value, it will use the initial value.
+
+```typescript
+import { Component, input } from '@angular/core';
+
+@Component({ ... })
+export class UserProfile {
+  // If no name is passed, name() will return 'Anonymous'.
+  name = input('Anonymous'); // Type is InputSignal<string>
+}
+```
+
+**2. Optional Input (without a default value):**
+If you don't provide an initial value, the input's type will be `T | undefined`.
+
+```typescript
+import { Component, input } from '@angular/core';
+
+@Component({ ... })
+export class UserProfile {
+  // If no name is passed, name() will return undefined.
+  name = input<string>(); // Type is InputSignal<string | undefined>
+}
+```
+
+**3. Required Input:**
+For inputs that the parent component *must* provide, use `input.required()`. This gives you compile-time safety.
+
+```typescript
+import { Component, input } from '@angular/core';
+
+@Component({ ... })
+export class UserProfile {
+  // The compiler will throw an error if a parent component
+  // tries to use <app-user-profile> without binding to [userId].
+  userId = input.required<string>(); // Type is InputSignal<string>
+}
+```
+
+#### Reading Values from Signal Inputs
+
+Since signal inputs are signals, you read their value by calling them as a function, just like any other signal.
+
+```html
+<!-- In the component's template -->
+<h2>User ID: {{ userId() }}</h2>
+<p>Welcome, {{ name() }}!</p>
+```
+
+#### `input()` vs. `@Input()` Decorator
+
+| Feature | `input()` function | `@Input()` decorator |
+| :--- | :--- | :--- |
+| **Style** | Function assigned to a property. | Decorator placed on a property. |
+| **Value Type** | Returns a `Signal<T>`. Read with `myInput()`. | Is a plain property of type `T`. Read with `this.myInput`. |
+| **Required** | Enforced at compile-time with `input.required()`. | Enforced at compile-time with `@Input({ required: true })`. |
+| **Reactivity** | Natively integrates with the signal-based reactivity system. | Relies on Zone.js or manual change detection for updates. |
+| **Best For** | Modern, signal-based components. | Traditional, Zone.js-based components. |
+
+In summary, the `input()` function is the future of defining component inputs in Angular, offering better type safety and a more consistent reactive model with the rest of the Signals API.
+
+### Communicating from Child to Parent: @Output and Custom Events
+
+While `@Input()` passes data down from parent to child, `@Output()` allows a child component to send data *up* to its parent. This is done by emitting custom events.
+
+The process involves three key parts: `@Output`, `EventEmitter`, and the `$event` payload in the parent's template.
+
+#### 1. The Child Component (The Emitter)
+
+The child component uses the `@Output()` decorator to expose a property of type `EventEmitter`. This `EventEmitter` is what the child will use to send out a notification (an event).
+
+*   **`@Output()`**: A decorator that marks a property as an event that can be listened to by the parent.
+*   **`EventEmitter<T>`**: A class from `@angular/core` used to emit custom events. The generic type `<T>` defines the type of data the event will carry (e.g., `string`, `number`, a custom `User` object).
+*   **.emit(payload)**: The method you call on the `EventEmitter` to fire the event. The argument you pass to `emit()` is the data payload.
+
+**Example (Child Component):**
+Let's say we have a `UserComponent` that emits the user's ID when it's clicked.
+
+```typescript
+// user.component.ts
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-user',
+  // ...
+})
+export class UserComponent {
+  @Input({ required: true }) id!: string;
+  @Input({ required: true }) name!: string;
+
+  // 1. Decorate a property with @Output() and make it a new EventEmitter.
+  //    The <string> indicates it will emit a string payload (the user's id).
+  @Output() select = new EventEmitter<string>();
+
+  onSelectUser() {
+    // 2. Call .emit() to fire the event and send the id as the payload.
+    this.select.emit(this.id);
+  }
+}
+```
+
+#### 2. The Parent Component (The Listener)
+
+The parent component listens for this custom event in its template. The event name is the same as the `@Output()` property name in the child (`select` in this case).
+
+*   **`(select)`**: This is the custom event binding. The parentheses `()` indicate that we are listening for an event.
+*   **`$event`**: This is a special variable in Angular templates that holds the payload of the emitted event. In our example, `$event` will be the user `id` string that was passed to `emit()`.
+
+**Example (Parent Component):**
+
+```html
+<!-- app.component.html -->
+<h1>User Management</h1>
+<!-- 3. Listen for the (select) event and call a handler method. -->
+<!--    The $event variable will contain the emitted user id. -->
+<app-user (select)="onUserSelected($event)" [id]="'u1'" [name]="'Jasmine'"></app-user>
+```
+
+```typescript
+// app.component.ts
+@Component({ ... })
+export class AppComponent {
+  selectedUserId?: string;
+
+  onUserSelected(id: string) {
+    // 4. The handler method receives the data from the child.
+    console.log('Parent received user ID:', id);
+    this.selectedUserId = id;
+  }
+}
+```
+
+#### The `output()` function (Signal-based)
+
+Starting in v17.1, there is a signal-based equivalent to `@Output()` called `output()`. It works very similarly but is designed for modern, signal-based components.
+
+```typescript
+// user.component.ts (Signal-based version)
+import { Component, Input, output } from '@angular/core'; // Note: output, not Output
+
+export class UserComponent {
+  @Input({ required: true }) id!: string;
+
+  // Create the output using the function. It returns an OutputEmitterRef.
+  select = output<string>();
+
+  onSelectUser() {
+    // Emitting is exactly the same.
+    this.select.emit(this.id);
+  }
+}
+```
+
+**Importantly, the parent component's template does not change at all.** It still listens for `(select)` and uses `$event`. This makes migrating from `@Output` to `output()` very easy.
+```
+
+The output() function is not a signal rather it just as same like @Output decorator which emits  ,it is just created to not use decorators when we code in signal 
+based approach.
+
+
+Day 4 
+
+**Importantly, the parent component's template does not change at all.** It still listens for `(select)` and uses `$event`. This makes migrating from `@Output` to `output()` very easy.
+
+Day 5
+
+### Union Types in TypeScript
+
+A union type is a powerful feature that allows a variable, function parameter, or object property to hold a value of one of several specified types. You create a union type by using the pipe (`|`) symbol between the types.
+
+**Why use Union Types?**
+
+They provide flexibility while still maintaining type safety. A common use case is a function that can accept different types of input.
+
+**Example:**
+
+Imagine a function that can find a user by their numeric `id` or their string `username`.
+
+```typescript
+function findUser(id: string | number) {
+  if (typeof id === 'string') {
+    // TypeScript knows 'id' is a string here
+    console.log(`Finding user with username: ${id.toUpperCase()}`);
+  } else {
+    // TypeScript knows 'id' is a number here
+    console.log(`Finding user with ID: ${id}`);
+  }
+}
+
+findUser('alice'); // Works
+findUser(123);     // Works
+// findUser(true); // Error: Argument of type 'boolean' is not assignable to parameter of type 'string | number'.
+```
+Inside the function, TypeScript is smart enough to narrow down the type based on your checks (like `typeof`), which is called "type narrowing".
+
+### Understanding `?` and `!` in TypeScript: Optional vs. Non-Null
+
+These two symbols are crucial for working with TypeScript's `strictNullChecks` mode, which is the standard for modern Angular projects. They help you manage values that might be `null` or `undefined`.
+
+#### The Question Mark `?`: Handling Potentially Missing Values
+
+The `?` has two related but distinct uses: defining optional properties and safely accessing them.
+
+**1. Optional Properties (`name?: string`)**
+
+When defining a class or an interface, you can mark a property as optional by adding a `?` after its name. This tells TypeScript that the property might not exist on objects of that type.
+
+```typescript
+interface UserProfile {
+  id: number;
+  displayName?: string; // This property is optional
+}
+
+function greet(user: UserProfile) {
+  // TypeScript knows 'displayName' could be undefined, so it warns you.
+  // console.log(user.displayName.toUpperCase()); // Error: 'displayName' is possibly 'undefined'.
+
+  // You must check if it exists first.
+  if (user.displayName) {
+    console.log(user.displayName.toUpperCase());
+  }
+}
+```
+
+**2. Optional Chaining (`user?.address?.street`)**
+
+This is an operator used when you try to access a nested property on an object that might be `null` or `undefined` at some point in the chain. It's a clean way to prevent runtime errors like "Cannot read properties of undefined".
+
+If any part of the chain before the `?.` is `null` or `undefined`, the entire expression short-circuits and returns `undefined` immediately, without throwing an error.
+
+**Without Optional Chaining (The "Old Way"):**
+```typescript
+// Clunky and hard to read
+if (user && user.address && user.address.street) {
+  console.log(user.address.street);
+}
+```
+
+**With Optional Chaining (The "Modern Way"):**
+```typescript
+const street = user?.address?.street;
+console.log(street); // Will log the street name or 'undefined' without crashing.
+```
+
+#### The Exclamation Mark `!`: Asserting a Value is Not Null
+
+The `!` is the **non-null assertion operator**. It's your way of telling the TypeScript compiler: "I know more than you do. I am 100% certain that this value is **not** `null` or `undefined` right now, so please let me use it."
+
+It's a way to override the compiler when it's being overly cautious.
+
+**When should you use it?**
+
+Use it sparingly, and only when you are absolutely sure the value exists.
+
+1.  **After an explicit check that TypeScript doesn't understand.**
+2.  **When interacting with Angular's lifecycle, like `@Input()` properties.** (As covered in Day 3 notes).
+3.  **When accessing DOM elements you know are in the HTML.**
+
+**Example:**
+
+```typescript
+// Assume my-button is guaranteed to be in the index.html
+const button = document.getElementById('my-button');
+
+// TypeScript's type for 'button' is `HTMLElement | null` because it can't be sure.
+// This would cause an error:
+// button.addEventListener(...); // Error: 'button' is possibly 'null'.
+
+// Using '!' tells TypeScript to trust us.
+const buttonAsserted = document.getElementById('my-button')!;
+buttonAsserted.addEventListener('click', () => console.log('Clicked!')); // No error
+```
+
+**Warning:** If you use `!` and you are wrong (the value is actually `null` or `undefined`), your code will crash at runtime. The `!` operator essentially silences a compile-time error, but the runtime risk is still yours.
+
+### Type Aliases vs. Interfaces
+
+In TypeScript, you have two primary ways to define the "shape" of an object or other data structures: `type` aliases and `interface`. While they are often interchangeable, they have key differences.
+
+#### `type` (Type Alias)
+
+A type alias creates a new name for a type. It's incredibly flexible and can be used for primitives, unions, tuples, and objects.
+
+**Example:**
+```typescript
+// For a union of string literals
+type Status = 'pending' | 'in-progress' | 'completed';
+
+// For an object shape
+type Person = {
+  id: string;
+  name: string;
+  age: number;
+};
+
+// For a primitive
+type UserID = string;
+```
+
+#### `interface`
+
+An interface is a way to define a contract for an object's shape. It can **only** be used to describe the shape of an object.
+
+**Example:**
+```typescript
+interface Person {
+  id: string;
+  name: string;
+  age: number;
+}
+
+// This would be an error:
+// interface Status = 'pending' | 'in-progress'; // Interfaces can't alias primitives or unions.
+```
+
+### Key Differences and When to Use Which
+
+| Feature | `interface` | `type` |
+| :--- | :--- | :--- |
+| **Declaration Merging** | **Yes.** Interfaces with the same name in the same scope are automatically merged. This is useful for extending third-party types. | **No.** A type alias cannot be declared more than once with the same name. |
+| **Extending** | Uses the `extends` keyword. Can extend multiple interfaces. | Uses the `&` (intersection) operator. |
+| **Can describe...** | Only object shapes. | Primitives, unions, tuples, objects, etc. |
+| **Implementation by Class** | Classes can `implement` an interface to enforce a contract. | Classes can also `implement` a type alias (if it describes an object). |
+
+#### Declaration Merging (Interfaces Only)
+
+This is a powerful feature where you can add new properties to an existing interface.
+
+```typescript
+// Original interface in a library
+interface Box {
+  width: number;
+  height: number;
+}
+
+// In your own code, you can add a new property to the same interface
+interface Box {
+  scale: number;
+}
+
+// The 'Box' interface now has all three properties
+const myBox: Box = { width: 10, height: 20, scale: 2 }; // This is valid
+```
+This is not possible with `type`.
+
+### Recommendation: When to Use Which?
+
+*   **Use `interface` by default** when defining the shape of objects or for contracts that classes will implement. The ability to merge declarations makes them more extensible, which is great when working with libraries or in large codebases.
+*   **Use `type`** when you need to create an alias for a primitive type (`type UserID = string;`), a union type (`type Status = 'pending' | 'done';`), a tuple, or when you need to use advanced type-level features that interfaces don't support.
+
+Many style guides (including Angular's) recommend preferring `interface` for object shapes for its extensibility, but using `type` is perfectly fine and sometimes necessary. **Consistency within your project is key.**
