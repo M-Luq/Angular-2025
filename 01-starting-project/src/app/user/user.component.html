@@ -1,5 +1,5 @@
 <div>
-    <button (click)="onSelectUser()">
+    <button [class.active]="selected" (click)="onSelectUser()">
         <!--
           [src] is an example of "Property Binding". We are binding to the `src`
           property of the `img` DOM element.

@@ -520,7 +520,6 @@ Day 4
 
 **Importantly, the parent component's template does not change at all.** It still listens for `(select)` and uses `$event`. This makes migrating from `@Output` to `output()` very easy.
 
-Day 5
 
 ### Union Types in TypeScript
 
@@ -707,3 +706,305 @@ This is not possible with `type`.
 *   **Use `type`** when you need to create an alias for a primitive type (`type UserID = string;`), a union type (`type Status = 'pending' | 'done';`), a tuple, or when you need to use advanced type-level features that interfaces don't support.
 
 Many style guides (including Angular's) recommend preferring `interface` for object shapes for its extensibility, but using `type` is perfectly fine and sometimes necessary. **Consistency within your project is key.**
+
+
+### Control Flow in Templates
+
+Angular has two ways of managing how content is rendered in a template: the modern, built-in control flow (`@if`, `@for`) introduced in v17, and the legacy structural directives (`*ngIf`, `*ngFor`).
+
+#### New Built-in Control Flow (`@if`, `@for`)
+
+This is the recommended approach for new applications. It's more ergonomic, easier to read, and doesn't require importing `CommonModule`.
+
+**`@if` Block**
+
+The `@if` block conditionally renders content based on a boolean expression. It's a direct replacement for `*ngIf`.
+
+**Syntax:**
+```html
+@if (user.isLoggedIn) {
+  <p>Welcome back, {{ user.name }}!</p>
+} @else if (user.isGuest) {
+  <p>Welcome, Guest!</p>
+} @else {
+  <p>Please log in to continue.</p>
+}
+```
+- **`@if (condition)`**: The main block that renders if `condition` is true.
+- **`@else if (condition)`**: An optional block that is checked if the preceding `@if` is false. You can have multiple `@else if` blocks.
+- **`@else`**: An optional block that renders if all preceding `@if` and `@else if` conditions are false.
+
+**`@for` Block**
+
+The `@for` block iterates over a collection (like an array) and renders a template for each item. It's a more powerful and efficient replacement for `*ngFor`.
+
+**Syntax:**
+```html
+<ul>
+  @for (user of users; track user.id; let i = $index, isFirst = $first) {
+    <li [class.first]="isFirst">
+      {{ i + 1 }}. {{ user.name }}
+    </li>
+  } @empty {
+    <li>No users found.</li>
+  }
+</ul>
+```
+- **`@for (item of collection; track expression)`**: The core loop definition.
+- **`@empty`**: An optional block that is rendered if the `collection` is empty.
+
+**The `track` Expression is Mandatory and Crucial**
+
+The `track` keyword is the most important part of the `@for` block. It tells Angular how to uniquely identify each item in the collection.
+
+- **Why is it required?** When the data in the collection changes (items are added, removed, or reordered), Angular needs a way to know which DOM elements correspond to which data items.
+    - **Without `track`**, Angular would have to destroy all the DOM elements in the list and recreate them from scratch. This is very inefficient, destroys component state (like user input in an `<input>` field), and breaks animations.
+    - **With `track`**, Angular can see that an item with `id: 5` has just moved from index 2 to index 0. It will simply *move* the corresponding DOM element instead of destroying and recreating it. This is vastly more performant.
+
+- **What to use for `track`?** You should always use a value that is unique to each item, like an `id` from a database (`track item.id`) or the object instance itself if it's guaranteed to be stable (`track item`). Using `$index` (`track $index`) is possible but defeats the purpose of tracking, as it can lead to the same performance problems as not having `track` at all.
+
+**Implicit Variables in `@for`**
+
+Inside a `@for` block, you have access to several helpful variables:
+- `$index`: The index of the current item in the array (number).
+- `$first`: Whether the current item is the first in the array (boolean).
+- `$last`: Whether the current item is the last in the array (boolean).
+- `$even`: Whether the current item has an even index (boolean).
+- `$odd`: Whether the current item has an odd index (boolean).
+- `$count`: The total number of items in the array (number).
+
+You can alias them using `let`, like `let idx = $index;`.
+
+---
+
+#### Legacy Structural Directives (`*ngIf`, `*ngFor`)
+
+These directives are still widely used in older codebases and require importing `CommonModule` into your component or NgModule. They are prefixed with an asterisk (`*`), which is syntactic sugar for a more complex `<ng-template>` structure.
+
+**`*ngIf` Directive**
+
+Conditionally includes a template based on the value of an expression.
+
+**Basic Syntax:**
+```html
+<div *ngIf="user.isLoggedIn">
+  Welcome back!
+</div>
+```
+
+**Syntax with an `else` block:**
+This requires using an `<ng-template>` with a template reference variable (`#`).
+```html
+<div *ngIf="user.isLoggedIn; else guestView">
+  <p>Welcome back, {{ user.name }}!</p>
+</div>
+
+<ng-template #guestView>
+  <p>Please log in.</p>
+</ng-template>
+```
+
+**`*ngFor` Directive**
+
+Repeats a template for each item in a collection. `trackBy` is the legacy equivalent of `@for`'s `track` and is crucial for performance. It requires a function in the component that returns a unique identifier for an item.
+
+**Syntax with `trackBy` and implicit variables:**
+```typescript
+// In your component's .ts file
+trackByUser(index: number, user: User): string {
+  return user.id;
+}
+```
+
+```html
+<!-- In your template -->
+<ul>
+  <li *ngFor="let user of users; let i = index; let isFirst = first; trackBy: trackByUser">
+    <span *ngIf="isFirst">(First)</span>
+    {{ i + 1 }}: {{ user.name }}
+  </li>
+</ul>
+```
+The implicit variables (`index`, `first`, `last`, `even`, `odd`) are available and can be aliased with `let`.
+
+Day 5 
+
+We can use the interface and type definitions in model.ts to make the code readable and maintain cleaner code
+
+Day 6
+
+### **Two-Way Binding**
+
+Two-way binding in Angular is a way to synchronize data between the component's **model** and its **view** (the HTML template). It's a two-way street: when the data in the model changes, the view updates, and when the user changes something in the view (like typing in a form field), the model updates automatically. It combines both **property binding** and **event binding** into a single syntax.
+
+The most common way to use it is with the `[(ngModel)]` directive on form elements. This is often called the "banana in a box" syntax. For example:
+
+```
+<input [(ngModel)]="userName"> -- need to use FormsModule to activate this ngModel
+```
+
+Here, the `userName` variable in the component's class is always in sync with what's typed in the input field.
+
+-----
+
+### **Directives vs. Components**
+
+**Components** are the primary building blocks of an Angular application. They're a specific type of directive that **always** has a template. A component controls a specific part of the user interface and encapsulates its own logic, data, and view. Think of them as custom HTML elements, like `<app-user-profile>`.
+
+**Directives**, on the other hand, are classes that modify or add new behavior to elements in the DOM. They do **not** have their own templates. They are used to change the appearance or structure of an existing element.
+
+| Feature | Components | Directives |
+| :--- | :--- | :--- |
+| **Purpose** | To create self-contained UI blocks. | To add behavior to existing elements. |
+| **Template** | **Always** required. | **Never** have one. |
+| **Usage** | As a new HTML element tag (e.g., `<my-component>`). | As an attribute on an existing element (e.g., `<div my-directive>`). |
+
+-----
+
+### **What is a Template?**
+
+A **template** in Angular is the HTML that defines a component's view. It's the visual part of the component that the user sees in the browser. A template can be a separate HTML file or an inline string of HTML within the component's TypeScript file.
+
+Templates aren't just static HTML; they contain special Angular syntax for features like:
+
+  - **Interpolation (`{{}}`)**: To display data from the component class.
+  - **Property Binding (`[]`)**: To set properties on an element.
+  - **Event Binding (`()`)**: To listen for events like clicks or keypresses.
+  - **Structural Directives (`*ngIf`, `*ngFor`)**: To add, remove, or repeat elements in the DOM.
+
+  Signals in two way binding
+
+I cannot show you how to use this in every possible scenario, as that would be an infinite number of examples. However, I can provide a comprehensive explanation with examples covering the most common use cases:
+
+1.  **Using `[(ngModel)]` with a regular `signal()` within a single component.**
+2.  **Using the `model()` function for parent-to-child two-way binding.**
+
+-----
+
+## 1\. Using `[(ngModel)]` with `signal()` (Single Component)
+
+This is the scenario you described where you bind `[(ngModel)]` directly to a `signal()`. It's a convenient shortcut for basic two-way binding within the same component's template.
+
+### Example
+
+Let's create a component that has a text input and displays the value as the user types.
+
+**`user-profile.component.ts`**
+
+```typescript
+import { Component, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-user-profile',
+  standalone: true,
+  imports: [FormsModule],
+  template: `
+    <h3>Scenario 1: Single Component Binding</h3>
+    <label for="name">Enter your name:</label>
+    <input id="name" type="text" [(ngModel)]="userName" />
+    <p>Hello, **{{ userName() }}**!</p>
+  `,
+})
+export class UserProfileComponent {
+  // A standard writable signal for data in this component
+  userName = signal('Jane Doe');
+}
+```
+
+  * **What's Happening?**
+      * We declare `userName = signal('Jane Doe')`. This creates a writable signal with an initial value.
+      * In the template, `[(ngModel)]="userName"` handles the two-way data flow automatically.
+      * **Property Binding (`[ngModel]`)**: Angular takes the current value of the `userName` signal (`'Jane Doe'`) and sets it as the value of the input field.
+      * **Event Binding (`(ngModelChange)`)**: When the user types, the `(ngModelChange)` event fires, and Angular uses `userName.set()` to update the signal with the new value from the input.
+      * The `{{ userName() }}` interpolation immediately updates to reflect the new value, demonstrating the real-time synchronization.
+
+-----
+
+## 2\. Using `model()` for Parent-Child Binding
+
+The `model()` function is specifically designed for two-way binding across components. It creates a special signal that can be passed from a parent to a child using the `[(...)]` syntax.
+
+### Example
+
+Let's create a parent component that controls a value and a child component that displays and modifies it.
+
+**`child.component.ts`**
+
+```typescript
+import { Component, model } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-child',
+  standalone: true,
+  imports: [FormsModule],
+  template: `
+    <p>Child Component:</p>
+    <label for="child-input">Edit the value:</label>
+    <input id="child-input" type="text" [(ngModel)]="childValue" />
+    <p>Value in child: **{{ childValue() }}**</p>
+  `,
+})
+export class ChildComponent {
+  // The model() function creates a two-way bindable signal
+  childValue = model.required<string>();
+}
+```
+
+**`parent.component.ts`**
+
+```typescript
+import { Component, signal } from '@angular/core';
+import { ChildComponent } from './child.component';
+
+@Component({
+  selector: 'app-parent',
+  standalone: true,
+  imports: [ChildComponent],
+  template: `
+    <h3>Scenario 2: Parent-Child Binding</h3>
+    <p>Parent Component:</p>
+    <p>Value in parent: **{{ parentValue() }}**</p>
+    <app-child [(childValue)]="parentValue"></app-child>
+  `,
+})
+export class ParentComponent {
+  // A regular signal in the parent component
+  parentValue = signal('Initial Parent Value');
+}
+```
+
+  * **What's Happening?**
+      * In the `ChildComponent`, `childValue = model.required<string>()` declares a two-way bindable signal. The `.required()` makes sure the parent component must provide a value.
+      * In the `ParentComponent`, `parentValue = signal(...)` is a standard signal.
+      * The magic happens here: `<app-child [(childValue)]="parentValue">`. This syntax tells Angular to link the parent's `parentValue` signal with the child's `childValue` model.
+      * When the user types in the input field in the **child component**, `[(ngModel)]="childValue"` updates the `childValue` signal. Because `childValue` is a model, this change is automatically propagated back to the **parent component's** `parentValue` signal.
+      * The `{{ parentValue() }}` in the parent component's template immediately updates to show the new value.
+
+
+When a user submits a form in a web browser, the browser's default behavior is to send an HTTP request to the URL specified in the form's `action` attribute. If no `action` attribute is specified, the form is submitted to the current page's URL. This typically results in a page reload or a navigation to a new page, which is not the desired behavior for single-page applications (SPAs) like those built with Angular.
+
+-----
+
+### How Angular Prevents Form Submission
+
+Angular prevents this default browser behavior when you use `FormsModule` and its associated directives like `ngForm`. It does this by listening for the form's `submit` event and then calling `event.preventDefault()` on it. This action stops the browser from performing its standard form submission, allowing Angular to handle the form data with its own logic without causing a page refresh.
+
+When you add the `ngForm` directive (which is automatically applied to any `<form>` element if you have `FormsModule` imported), Angular takes control of the form. It then exposes a local template reference variable (e.g., `#myForm="ngForm"`) that you can use to access the form's state and data.
+
+Here’s a typical example:
+
+```html
+<form #myForm="ngForm" (ngSubmit)="onSubmit(myForm)">
+  <label for="name">Name:</label>
+  <input type="text" id="name" name="name" [(ngModel)]="model.name" required>
+  <button type="submit">Submit</button>
+</form>
+```
+
+In this code:
+
+  * The `ngForm` directive on the `<form>` element gives Angular control.
+  * The `(ngSubmit)` event listener is an Angular event that only fires after Angular has prevented the default browser submission. It's the "Angular way" to handle form submission.
+  * The `preventDefault()` call is handled internally by Angular, so you don't have to write that code yourself. This allows you to process the form data in the `onSubmit()` method in your component's TypeScript file.
