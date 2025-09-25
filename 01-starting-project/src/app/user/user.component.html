@@ -1,4 +1,4 @@
-<div>
+<app-card>
     <button [class.active]="selected" (click)="onSelectUser()">
         <!--
           [src] is an example of "Property Binding". We are binding to the `src`
@@ -43,4 +43,4 @@
         <img [src]="imagePath" [alt]="user.name" />
         <span>{{user.name}}</span>
     </button>
-</div>
+</app-card>

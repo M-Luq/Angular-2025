@@ -1008,3 +1008,191 @@ In this code:
   * The `ngForm` directive on the `<form>` element gives Angular control.
   * The `(ngSubmit)` event listener is an Angular event that only fires after Angular has prevented the default browser submission. It's the "Angular way" to handle form submission.
   * The `preventDefault()` call is handled internally by Angular, so you don't have to write that code yourself. This allows you to process the form data in the `onSubmit()` method in your component's TypeScript file.
+
+Day 7
+
+The behavior you're describing is the core purpose of **`ng-content`** in Angular. When you use a shared component like your `app-card`, it creates a self-contained unit with its own template. Without `ng-content`, Angular doesn't know where to project the content you're putting inside the component's tags.
+
+Here's why `ng-content` is essential and how it works:
+
+### What is `ng-content`?
+
+**`ng-content`** is a placeholder in a component's template that tells Angular where to insert content from another component's template. This technique is called **content projection**.  It allows you to create reusable components (like your `app-card`) that can wrap and present different content from their parent components (like your task and user components).
+
+-----
+
+### Why It Doesn't Work Without `ng-content`
+
+When you write:
+
+```html
+<app-card>
+  <p>This is a task item</p>
+</app-card>
+```
+
+Angular's template compiler sees `<app-card>` and loads the `card.component.html` template. However, the `<p>This is a task item</p>` part is not part of the `card.component.html` template. It's just content placed between the component's tags. Without a specific instruction, Angular has no place to render this content, so it's ignored and never displayed.
+
+### Why It Works With `ng-content`
+
+When you add `ng-content` to your `card.component.html` template, you provide that instruction.
+
+**`card.component.html`**
+
+```html
+<div class="card-container">
+  <ng-content></ng-content>
+</div>
+```
+
+Now, when Angular processes `<app-card>`, it looks at its template. When it finds `<ng-content>`, it says, "Okay, whatever HTML content was placed inside the `<app-card>` tags should be rendered right here." This allows your task and user components to "project" their unique content into the shared card component's structure and styling.
+
+In short, think of **`ng-content`** as a hole in your reusable component's template that you can fill with custom content from the parent component. Without that hole, the content has nowhere to go.
+
+Pipes in Angular are a way to transform data for display in a template. They take in data as input and return transformed data as output, without changing the original value. You can use pipes to format strings, currencies, dates, and more.
+
+### How to Use Pipes
+
+Pipes are used in templates within the interpolation syntax `{{ }}`. You use the pipe operator (`|`) to apply the pipe.
+
+```html
+<p>Original Date: {{ myDate }}</p>
+<p>Formatted Date: {{ myDate | date }}</p>
+```
+
+In this example, the `date` pipe takes the value of `myDate` and formats it into a more readable date string. The original `myDate` value in the component's TypeScript file remains unchanged.
+
+-----
+
+### Chaining Pipes and Arguments
+
+You can chain multiple pipes together to apply a series of transformations. You can also pass arguments to a pipe using a colon (`:`) after the pipe's name.
+
+```html
+<p>Full Name: {{ 'john doe' | uppercase }}</p>
+<p>Currency: {{ myPrice | currency:'EUR':'symbol':'1.2-2' }}</p>
+```
+
+In the second example, `currency` is the pipe, `'EUR'` is the first argument (the currency code), `'symbol'` is the second argument (how to display the symbol), and `'1.2-2'` is the third argument (a formatting string for the number).
+
+-----
+
+### Built-in Pipes
+
+Angular provides a number of built-in pipes for common data transformations:
+
+  * **`DatePipe`**: Formats dates based on a locale.
+  * **`UpperCasePipe`** and **`LowerCasePipe`**: Converts text to upper or lower case.
+  * **`CurrencyPipe`**: Formats a number as a currency.
+  * **`DecimalPipe`**: Formats a number with a specific number of decimal places.
+  * **`JsonPipe`**: Converts a JavaScript object to a JSON string.
+  * **`AsyncPipe`**: Automatically subscribes to an Observable or Promise and returns the latest value. This is extremely useful for handling asynchronous data in templates.
+
+-----
+
+### Custom Pipes
+
+If a built-in pipe doesn't meet your needs, you can create a custom pipe. To create a custom pipe, you use the `@Pipe` decorator and the `PipeTransform` interface.
+
+**`my-custom.pipe.ts`**
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'myCustom'
+})
+export class MyCustomPipe implements PipeTransform {
+  transform(value: string, arg1?: string): string {
+    // Logic to transform the value goes here
+    return value.replace('old', 'new');
+  }
+}
+```
+
+You then declare this pipe in your `NgModule` or import it directly into a standalone component to use it in your templates.
+
+
+Dependency injection 
+
+If we create a new instance in each ts file then the same data will not be shared among all components so that is why DI is 
+there in angular.
+
+Dependency Injection (DI) in Angular is a design pattern that provides a way to supply a class with its dependencies (the objects it needs to function) rather than having the class create them itself. Your understanding is a great start—you've hit on one of the key reasons why DI is so important.
+
+### Why Not Create a New Instance Every Time?
+
+You're absolutely right. If every component created its own instance of a service, then each component would be working with a different set of data. This breaks the fundamental principle of a single source of truth and makes it impossible to share state between components.
+
+Consider a simple `UserService` that holds an array of user data.
+
+```typescript
+// Without DI
+// user-list.component.ts
+export class UserListComponent {
+  private userService = new UserService(); // New instance
+  users = this.userService.getUsers();
+}
+
+// user-detail.component.ts
+export class UserDetailComponent {
+  private userService = new UserService(); // Another new instance
+  user = this.userService.getUserById(1);
+}
+```
+
+In this scenario, `UserListComponent` and `UserDetailComponent` each have their own, separate copy of the `UserService` and its data. A change made to the user list would not be reflected in the user detail view, leading to inconsistent data and a bad user experience.
+
+-----
+
+### How Angular's DI Solves This
+
+Angular's DI system provides a **single, shared instance** of a service to all components that request it. This ensures that all components are working with the exact same data.
+
+Angular uses an **injector** to manage the creation and lifespan of services. When a component declares a service as a dependency in its constructor, the injector provides it.
+
+```typescript
+// With DI
+// user-list.component.ts
+import { Component } from '@angular/core';
+import { UserService } from './user.service';
+
+@Component(...)
+export class UserListComponent {
+  // The injector provides a single, shared instance of UserService
+  constructor(private userService: UserService) { }
+  
+  users = this.userService.getUsers();
+}
+```
+
+In this case, Angular's DI container is responsible for creating a **singleton** instance of `UserService` and injecting it into both the `UserListComponent` and `UserDetailComponent` (and any other component that asks for it). This guarantees that both components are using the same service instance and, therefore, the same data.
+
+This approach offers several key benefits:
+
+1.  **Data Sharing:** It enables components to share and synchronize data effortlessly. A change made by one component is immediately visible to others.
+2.  **Reusability:** Services can be reused across the application without having to write repetitive instantiation code.
+3.  **Testability:** It makes components easier to test because you can provide mock or fake service instances during unit tests, isolating the component's logic from its dependencies.
+
+
+Using `private` in a constructor is a **TypeScript shorthand** that automatically creates and initializes a property with the specified name and access modifier on the class. It is a convenience feature, not a core part of Angular's Dependency Injection (DI) system itself.
+
+The two methods you mentioned for requesting a dependency are the two common ways to tell Angular's DI container to provide an instance of a service:
+
+1.  **Constructor Injection:** This is the traditional method and is more explicit.
+2.  **`inject()` function:** This is a newer, functional approach that is more flexible.
+
+Both of these methods tell Angular, "I need an instance of `TaskService`." However, they don't work unless you also use the `@Injectable()` decorator.
+
+---
+
+### The Role of `@Injectable()`
+
+The `@Injectable()` decorator is the crucial missing piece of the puzzle. It serves two primary purposes for the DI system:
+
+1.  **Marks a class as a Service:** It flags the class as a dependency that can be managed by the Angular DI container. Without this, the Angular compiler would not know to include the service in the dependency graph.
+2.  **Configures the Injector:** The `@Injectable()` decorator, particularly with the `providedIn: 'root'` option, registers the service with the root injector. This tells Angular **where** to provide the service and creates a single, shared instance (a **singleton**) of that service for the entire application.
+
+In essence, your statement is correct: you use the constructor or `inject()` to **request** a service, and you use `@Injectable()` to **make the service available** for injection in the first place. You must have both pieces working together. 
+
+ 
