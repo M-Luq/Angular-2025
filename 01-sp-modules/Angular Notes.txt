@@ -1,0 +1,89 @@
+🔄 Angular Component Defaults: Angular 19 vs. Older Versions
+Angular 19 introduced a significant change in how components are created by default:
+
+Angular Version	Default Component Type (if standalone is not set)	How to get a Module-based component	How to get a Standalone component
+Angular 19+	Standalone Component	Explicitly set standalone: false in @Component()	Don't set standalone or set standalone: true
+Older Versions (< 19)	Module-based Component	Don't set standalone or set standalone: false	Explicitly set standalone: true in @Component()
+
+Export to Sheets
+⚠️ Note for this course section: If you are using Angular 19+, you must set standalone: false in your @Component() decorator to use the Module-based approach covered here.
+
+📦 The Module-based Approach in Angular
+The Module-based approach uses Angular Modules (classes decorated with @NgModule) to organize and group application parts (components, pipes, directives, services).
+
+It differs from the Standalone approach primarily in how components and their dependencies are managed:
+
+Standalone Approach: Each component manages its own dependencies via the imports array inside its @Component() decorator.
+
+Module-based Approach: A parent Angular Module (e.g., AppModule) manages the components that belong to it and defines their available dependencies.
+
+1. Module Structure (app.module.ts)
+The central part of the Module-based approach is the Angular Module, defined using the @NgModule decorator:
+
+TypeScript
+
+import { NgModule } from '@angular/core';
+import { BrowserModule } from '@angular/platform-browser';
+import { AppComponent } from './app.component'; // Module-based Component
+
+@NgModule({
+  declarations: [
+    AppComponent, // List of Module-based components, directives, and pipes
+    // ... Other components in this module
+  ],
+  imports: [
+    BrowserModule, // Required for the root module in Module-based apps
+    // ... Other Angular Modules or Standalone Components/Directives/Pipes
+  ],
+  providers: [
+    // Services provided at the module level
+  ],
+  bootstrap: [
+    AppComponent // The root component to start the application (ONLY in the root module)
+  ],
+  exports: [
+    // Items (components, pipes, directives, other modules) to be made available 
+    // when this module is imported by another module.
+  ]
+})
+export class AppModule { }
+Property	Purpose	Example
+declarations	Lists the Module-based components, directives, and pipes that belong to this module.	AppComponent
+imports	Lists other Angular Modules (like BrowserModule or CommonModule) or Standalone components/pipes/directives that this module's declared components need to use.	BrowserModule, HttpClientModule
+bootstrap	Specifies the main root component to be loaded when the application starts. Only used in the root module (usually AppModule).	AppComponent
+exports	Specifies a subset of the components, directives, and pipes (from declarations) or imported modules that should be available to other modules that import this module.	HeaderComponent (if another module needs to use it)
+
+Export to Sheets
+2. Bootstrapping the Application (main.ts)
+In the Module-based approach, the application is typically started by bootstrapping the root module:
+
+TypeScript
+
+import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import { AppModule } from './app.module';
+
+platformBrowserDynamic().bootstrapModule(AppModule)
+  .catch(err => console.error(err));
+The platformBrowserDynamic().bootstrapModule(AppModule) call tells Angular where to start—by initializing the AppModule.
+
+3. Mixing Standalone and Module-based Components
+It is possible to use both types of components within a Module-based application:
+
+Module-based Components: Must be listed in the declarations array of an Angular Module.
+
+Standalone Components/Pipes/Directives: Can be listed in the imports array of an Angular Module to make them available to the components declared in that module.
+
+4. Essential Modules: BrowserModule vs. CommonModule
+BrowserModule:
+
+Essential for any application running in a browser.
+
+Provides basic browser services, rendering code, and features like DatePipe.
+
+RULE: Must only be imported once, in the root module (usually AppModule).
+
+CommonModule:
+
+Provides common directives (*ngIf, *ngFor) and pipes (DatePipe, CurrencyPipe).
+
+RULE: Used in feature modules (non-root modules) that need access to these common features. It avoids re-importing features already provided by BrowserModule in the root module.
