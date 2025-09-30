@@ -1,0 +1,106 @@
+1. When to Split Components
+The primary principle for component splitting aligns with the Single Responsibility Principle (SRP).
+
+Rule of Thumb: Components should be split in such a way that each component does one main thing and does it well.
+
+Avoid Over-Reliance on Preference: While user preference matters for design, technical decisions on splitting should focus on reusability, maintainability, and clarity.
+
+Example Scenario:
+
+HTML
+
+<app-dashboard-item [image]="{src:'status.png',alt:'A Signal Symbol'}" title="Server Status">
+  <app-server-status/>
+</app-dashboard-item>
+Split: The general layout, image, and title are handled by the reusable <app-dashboard-item>.
+
+Focus: The specific logic for displaying the server's data is isolated in the nested <app-server-status/>. This keeps app-dashboard-item clean and reusable for any dashboard metric.
+
+2. Understanding Property Binding ([])
+Property binding is crucial for passing non-string data, such as objects, arrays, booleans, or complex expressions, into a component's input properties.
+
+Syntax	Input Value Type	Use Case
+Attribute Binding (No brackets)	String	For static, simple string values.
+Property Binding ([])	TypeScript/JavaScript Expression	For variables, objects, functions, or any non-string literal.
+
+Export to Sheets
+The Problem and Solution
+Input	How Angular Interprets It	Correct Syntax
+image="{src:'status.png',alt:'A Symbol'}"	A single string value: "{src:'status.png',alt:'A Symbol'}"	[image]="{src:'status.png',alt:'A Symbol'}" (Passes an Object)
+title="Server Status"	A single string value: "Server Status"	title="Server Status" (Passes a String)
+[title]="'Server Status'"	A TypeScript expression that resolves to the string value 'Server Status'	[title]="'Server Status'" or the simpler attribute binding title="Server Status"
+
+Export to Sheets
+Key Takeaway: Always use property binding ([]) when passing an object, array, or variable. For simple, static strings, attribute binding (no brackets) is clearer and sufficient.
+
+3. Extending Built-in Components (Attribute Selectors)
+When creating a component, using a standard element selector (e.g., selector: 'app-button') results in an extra, non-semantic DOM element being added to the HTML tree, which can complicate styling and DOM structure.
+
+Problem (Extra Tags in DOM)
+Component Usage	Resulting DOM
+<li><app-button/></li>	<li><app-button><button></button></app-button></li>
+
+Export to Sheets
+Solution: Attribute Selector
+By changing the component's selector to an attribute selector, you instruct Angular to apply your component's logic and template to an existing element, avoiding the extra tag.
+
+Selector Type	Example	Usage	Resulting DOM (Cleaner)
+Attribute	@Component({ selector: 'button[appButton]' })	<button appButton>Click Me</button>	<button appButton>Click Me</button>
+
+Export to Sheets
+Note: Even when using an attribute selector, you must import the component's module (or the component itself if it's standalone) wherever you use the appButton attribute.
+
+4. Content Projection in Multiple Slots
+Angular uses the <ng-content> element to define projection slots within a component's template. Using the select attribute allows content to be projected into specific, targeted slots.
+
+A. Targeting Slots
+You can target content using CSS selectors in the select attribute.
+
+Example Component Template (appButton):
+
+HTML
+
+<span>
+    <ng-content/>  </span>
+<ng-content select=".icon"/> ```
+
+**Example Component Usage:**
+```html
+<button appButton>
+    Submit  <span class="icon">
+        ⌲     </span>
+</button>
+B. Using ngProjectAs
+The ngProjectAs attribute allows you to force content into a specific slot even if its natural selector doesn't match. This is useful when you want content to behave like an icon (e.g., for styling) without changing the actual element tag or class.
+
+Example Component Template (appButton):
+
+HTML
+
+<span>
+    <ng-content/> 
+</span>
+<span class="icon">
+    <ng-content select="icon"/> 
+</span>
+Example Component Usage:
+
+HTML
+
+<button appButton>Logout
+    <span ngProjectAs="icon">⌲</span> 
+</button>
+The <span> element is projected into the <ng-content select="icon"/> slot because of ngProjectAs="icon".
+
+C. Fallback Content
+In recent Angular versions, content can be placed in between the opening and closing <ng-content> tags. This content acts as a fallback that is displayed only if the parent component provides no content that matches that specific <ng-content> element's selector.
+
+Example:
+
+HTML
+
+<span class="icon">
+    <ng-content select="icon">
+        ⚠️
+    </ng-content>
+</span>
