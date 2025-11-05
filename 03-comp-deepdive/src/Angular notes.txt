@@ -247,4 +247,366 @@ import { Component, ViewEncapsulation } from '@angular/core';
 export class AppGlobalStyleComponent { ... }
 ```
 
+Day 12
+
+It's easy to confuse **`@HostBinding`** and **`@HostListener`**, but the core difference comes down to **Data Binding** versus **Event Listening** on the **host element**.
+
+Here's an explanation with examples to help you recall their purpose:
+
+-----
+
+## 💡 The "Host" Element
+
+First, understand the **Host Element**. In Angular, the "host" is the element to which your **Component** or **Directive** is applied.
+
+  * **For a Directive:** If you apply a directive `appHighlight` to a `div` like `<div appHighlight>...</div>`, the `div` is the **Host Element**.
+  * **For a Component:** The host is the element created by the component's selector, e.g., for `<app-card>`, the `<app-card>` tag itself is the **Host Element**.
+
+-----
+
+## 🎨 `@HostBinding`: The Property Setter (Like `[property]="value"`)
+
+The `@HostBinding` decorator is used to **bind a property** of your component/directive class to a property, attribute, or style of the **Host Element**.
+
+**Purpose:** **OUTGOING** — It allows your class logic to **set a value** on the host element. Think of it as **setting a host property** from *inside* your class.
+
+| Key Concept | Analogy |
+| :--- | :--- |
+| **`@HostBinding`** | Like a **faucet** 💧: It controls the flow of data **OUT** of your class to the host element. |
+| **Usage** | `@HostBinding('hostPropertyName') classNameProperty: string;` |
+
+### Example: Setting a Style Property
+
+This directive sets the host element's background color.
+
+```typescript
+import { Directive, HostBinding } from '@angular/core';
+
+@Directive({ selector: '[appHighlight]' })
+export class HighlightDirective {
+  // Bind the 'style.backgroundColor' property of the host element
+  // to the internal property 'backgroundColor' in this class.
+  // Whenever 'backgroundColor' changes, the host's style updates.
+  @HostBinding('style.backgroundColor') 
+  backgroundColor: string = 'yellow'; // <--- Initial value
+
+  // ... rest of the directive logic
+}
+```
+
+**HTML Usage:** `<div appHighlight>I will have a yellow background</div>`
+
+-----
+
+## 👂 `@HostListener`: The Event Listener (Like `(event)="handler()"`)
+
+The `@HostListener` decorator is used to **listen for events** on the **Host Element** and execute a method in response.
+
+**Purpose:** **INCOMING** — It allows your class logic to **react to an event** happening on the host element. Think of it as **handling a host event** from *inside* your class.
+
+| Key Concept | Analogy |
+| :--- | :--- |
+| **`@HostListener`** | Like a **doorbell** 🔔: It detects when an event happens **ON** the host element and calls a method. |
+| **Usage** | `@HostListener('eventName', ['$event']) methodToRun(event: any) {}` |
+
+### Example: Listening for a Click Event
+
+This directive runs a method when the host element is clicked.
+
+```typescript
+import { Directive, HostListener } from '@angular/core';
+
+@Directive({ selector: '[appClickTracker]' })
+export class ClickTrackerDirective {
+  clickCount: number = 0;
+
+  // Listen for the 'click' event on the host element.
+  // When it occurs, run the onClick method.
+  // ['$event'] passes the DOM event object as an argument.
+  @HostListener('click', ['$event']) 
+  onClick(event: MouseEvent) {
+    this.clickCount++;
+    console.log(`Host clicked! Total clicks: ${this.clickCount}`);
+  }
+}
+```
+
+**HTML Usage:** `<button appClickTracker>Click Me</button>`
+
+-----
+
+## 🤝 Combined Example: The Power Duo
+
+They are often used together to create dynamic UI effects, like changing the appearance of an element when a user hovers over it.
+
+### Example: Hover Highlight Directive
+
+```typescript
+import { Directive, HostBinding, HostListener } from '@angular/core';
+
+@Directive({ selector: '[appHoverEffect]' })
+export class HoverEffectDirective {
+  // 1. HostBinding: Binds the host's 'style.border' to this property.
+  @HostBinding('style.border') 
+  private currentBorder: string = 'none';
+
+  // 2. HostListener: Listens for the mouse to enter the host element.
+  @HostListener('mouseenter') 
+  onMouseEnter() {
+    // When mouse enters, use HostBinding to update the host's border.
+    this.currentBorder = '2px solid blue'; 
+  }
+
+  // 3. HostListener: Listens for the mouse to leave the host element.
+  @HostListener('mouseleave') 
+  onMouseLeave() {
+    // When mouse leaves, use HostBinding to reset the host's border.
+    this.currentBorder = 'none';
+  }
+}
+```
+
+**HTML Usage:** `<div appHoverEffect>Hover over me!</div>`
+
+Now you can recall it as:
+
+  * **`@HostBinding`** is for **B**inding a value **OUT** to the host.
+  * **`@HostListener`** is for **L**istening for events **IN** from the host.
+
+
+Accesssing host elements Programtically 
+
+We can access it programtically by injecting ElementRef 
+
+ele = inject(ElementRef)
+
+Class Binding:
+
+## What is Class Binding in Angular?
+
+**Class Binding** in Angular is a way to **dynamically add or remove CSS classes** from an HTML element based on the state of your component. It is a form of Angular's **property binding** that specifically targets the `class` attribute of an element.
+
+It gives you granular control, allowing you to bind to:
+
+1.  A **single CSS class** (the most common use).
+2.  **Multiple CSS classes** at once (using an object).
+
+-----
+
+### 1\. Single Class Binding (The most common form)
+
+You use the binding syntax `[class.className]` to bind a single class name.
+
+  * The part after the dot (`.`) is the **name of the CSS class** you want to apply.
+  * The expression on the right is a **boolean** value from your component.
+
+#### 🛠️ Syntax and Purpose
+
+| Syntax | `[class.className]="expression"` |
+| :--- | :--- |
+| **`className`** | The name of the CSS class (e.g., `active`, `error`, `highlight`). |
+| **`expression`** | A boolean (e.g., `true`, `false`, `isLoggedIn`, `item.count > 0`). |
+| **Result** | If the expression is **true**, the class is **added** to the element. If **false**, the class is **removed**. |
+
+#### 📝 Example
+
+**Component (`.ts`)**
+
+```typescript
+// Assume this is inside your component class
+isPrimary: boolean = true;
+isDanger: boolean = false;
+```
+
+**Template (`.html`)**
+
+```html
+<button 
+  [class.btn-primary]="isPrimary"     [class.btn-danger]="isDanger">     Click Me
+</button>
+```
+
+**Resulting HTML (when rendered):**
+
+```html
+<button class="btn-primary">Click Me</button>
+```
+
+-----
+
+### 2\. Multi-Class Binding (Using an Object)
+
+You can bind to the entire `class` attribute using the standard property binding syntax `[class]` and pass it a **JavaScript object**.
+
+#### 🛠️ Syntax and Purpose
+
+| Syntax | `[class]="classObject"` |
+| :--- | :--- |
+| **`classObject`** | A JavaScript object where **keys** are the class names and **values** are boolean expressions. |
+| **Result** | Angular iterates through the object: if a key's value is **true**, that class is **added**; if **false**, it is **removed**. |
+
+#### 📝 Example
+
+**Component (`.ts`)**
+
+```typescript
+// Assume this is inside your component class
+getCssClasses(): object {
+  const isHighPriority = this.task.priority === 'High';
+  const isCompleted = this.task.status === 'Done';
+  
+  return {
+    'priority-high': isHighPriority,  // true if High
+    'text-strikethrough': isCompleted, // true if Done
+    'hidden': false                    // always false
+  };
+}
+```
+
+**Template (`.html`)**
+
+```html
+<div [class]="getCssClasses()">
+  {{ task.name }}
+</div>
+```
+
+If `this.task.priority` is 'High' and `this.task.status` is 'In Progress', the rendered HTML will be:
+
+```html
+<div class="priority-high">Task Name</div>
+```
+
+-----
+
+## 🆚 Class Binding vs. NgClass
+
+Class Binding (`[class.name]`) is ideal when you need to toggle **one or two** specific classes.
+
+**`NgClass`** (`[ngClass]`) is a built-in Angular **directive** that provides more flexibility and power for toggling **many classes at once**, especially when you are calculating the classes in complex ways or based on multiple conditions.
+
+| Feature | Class Binding (`[class.name]`) | NgClass (`[ngClass]`) |
+| :--- | :--- | :--- |
+| **Use Case** | Simple toggling of **one or two** known classes. | Complex toggling of **many** classes (using objects, arrays, or strings). |
+| **Syntax** | Verbose for many classes: `<div [class.c1]="b1" [class.c2]="b2">` | Concise for many classes: `<div [ngClass]="{c1: b1, c2: b2}">` |
+
+**NgClass Example:**
+
+```html
+<button [ngClass]="{'btn-primary': isPrimary, 'btn-danger': isDanger}">
+  Click Me
+</button>
+```
+
+## 💅 What is Style Binding in Angular?
+
+**Style Binding** in Angular is a method for **dynamically setting the inline styles** of an HTML element based on data from your component. It is a form of Angular's **property binding** that specifically targets the `style` attribute.
+
+Style Binding allows you to control properties like `color`, `font-size`, `width`, `backgroundColor`, etc., programmatically.
+
+-----
+
+## 🛠️ Style Binding Syntax and Usage
+
+You can bind styles in two main ways: binding a **single style property** or binding **multiple styles** using an object.
+
+### 1\. Single Style Binding (The most common form)
+
+Use the binding syntax `[style.style-property]` to set a single CSS style property.
+
+| Syntax | `[style.style-property.unit]="expression"` |
+| :--- | :--- |
+| **`style-property`** | The name of the CSS style property (e.g., `backgroundColor`, `fontSize`). |
+| **`.unit` (Optional)** | A suffix for the style value (e.g., `px`, `em`, `%`). Use this when the value is a number. |
+| **`expression`** | A string or numeric value from your component (e.g., `'blue'`, `24`). |
+
+#### Example: Setting Color and Font Size
+
+**Component (`.ts`)**
+
+```typescript
+// Assume this is inside your component class
+colorValue: string = 'green';
+fontSizePx: number = 18;
+```
+
+**Template (`.html`)**
+
+```html
+<p 
+  [style.color]="colorValue"              [style.font-size.px]="fontSizePx">      This text changes appearance based on component data.
+</p>
+```
+
+-----
+
+### 2\. Multi-Style Binding (Using an Object)
+
+You can bind to the entire `style` attribute using the standard property binding syntax `[style]` and pass it a **JavaScript object**.
+
+| Syntax | `[style]="styleObject"` |
+| :--- | :--- |
+| **`styleObject`** | A JavaScript object where **keys** are the CSS property names (in **camelCase**) and **values** are the corresponding style values (as strings or numbers). |
+
+#### Example: Setting Multiple Styles
+
+**Component (`.ts`)**
+
+```typescript
+// Assume this is inside your component class
+getCardStyles(): object {
+  return {
+    'width': '300px',
+    'border': '1px solid #ccc',
+    'boxShadow': this.isActive ? '0 4px 8px rgba(0,0,0,0.1)' : 'none',
+    'padding': '10px'
+  };
+}
+isActive: boolean = true;
+```
+
+**Template (`.html`)**
+
+```html
+<div [style]="getCardStyles()">
+  This div has multiple styles applied from the component's method.
+</div>
+```
+
+If `this.isActive` is `true`, the resulting HTML will have:
+
+```html
+<div style="width: 300px; border: 1px solid rgb(204, 204, 204); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); padding: 10px;">
+  ...
+</div>
+```
+
+-----
+
+## 🆚 Style Binding vs. NgStyle
+
+Style Binding (`[style.property]`) is ideal for **simple, direct control** over one or two style properties.
+
+**`NgStyle`** (`[ngStyle]`) is a built-in Angular **directive** that provides a cleaner, more readable way to apply **multiple styles at once**, especially when the style logic is complex or needs to be calculated in the template.
+
+| Feature | Style Binding (`[style.name]`) | NgStyle (`[ngStyle]`) |
+| :--- | :--- | :--- |
+| **Use Case** | Simple control of **one or two** specific properties. | Applying **multiple styles** simultaneously. |
+| **Syntax** | Verbose for many properties: `<p [style.c1]="v1" [style.c2]="v2">` | Concise for many properties: `<p [ngStyle]="{c1: v1, c2: v2}">` |
+
+**NgStyle Example:**
+
+```html
+<div [ngStyle]="{
+  'width': '300px',
+  'border': '1px solid #ccc',
+  'boxShadow': isActive ? '0 4px 8px rgba(0,0,0,0.1)' : 'none',
+  'padding': '10px'
+}">
+  ...
+</div>
+```
+
+Would you like to review property binding, the broader concept that encompasses class and style binding?
+
 
