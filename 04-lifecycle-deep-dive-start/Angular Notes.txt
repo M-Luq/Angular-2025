@@ -1,0 +1,87 @@
+Day 13
+
+Component Lifecycle : 
+
+https://angular.dev/guide/components/lifecycle
+
+https://angular.dev/guide/components/lifecycle#execution-order
+
+That's a great question\! Understanding the **Angular Component Lifecycle** and the difference between **View** and **Content** is fundamental to building robust Angular applications.
+
+-----
+
+## 🔁 Angular Component Lifecycle Hooks
+
+Angular components and directives have a well-defined lifecycle managed by the framework. Lifecycle hooks are methods you can implement to tap into key moments in a component's life, from creation to destruction.
+
+Here are the hooks, executed in the following order:
+
+### 1\. Creation Phase (Initialization)
+
+| Hook | When it runs | Purpose |
+| :--- | :--- | :--- |
+| **`ngOnChanges()`** | Called **before** `ngOnInit()`, and every time Angular detects a change to **input properties** (properties decorated with `@Input()`). | Use this to respond immediately to changes in data-bound input properties. It runs first and potentially many times. |
+| **`ngOnInit()`** | Called **once** after the component is initialized and the first `ngOnChanges()` has run. | Use this for **initialization logic** like setting up services, fetching initial data, or performing complex setup. This is the recommended place for most startup logic, not the constructor. |
+| **`ngDoCheck()`** | Called immediately after `ngOnChanges()` on every change detection run, and immediately after `ngOnInit()`. | Use this to implement or customize your own **change detection logic** for cases where Angular's default detection doesn't catch a change (e.g., changes within objects that Angular only checks by reference). **Use with caution**, as it can easily hurt performance. |
+
+-----
+
+### 2\. Update Phase (View and Content Rendering)
+
+These hooks relate to how the component's **view** and any projected **content** are rendered.
+
+| Hook | When it runs | Purpose |
+| :--- | :--- | :--- |
+| **`ngAfterContentInit()`** | Called **once** after Angular projects external content into the component's view. | Use this to access the **projected content** (elements passed via `<ng-content>`) that has been initialized. |
+| **`ngAfterContentChecked()`** | Called after `ngDoCheck()` and after Angular checks the **projected content** for changes. | Use this to perform extra checks or operations after the projected content has been checked. It runs frequently. |
+| **`ngAfterViewInit()`** | Called **once** after Angular initializes the component's **view** and its **child views** (components/directives *within* its template). | Use this to access and manipulate the component's own DOM elements and child components via `@ViewChild()` or `@ViewChildren()`. |
+| **`ngAfterViewChecked()`** | Called after `ngAfterContentChecked()` and after Angular checks the component's **view** and its **child views** for changes. | Use this to perform extra checks or operations after the component's view and its children have been checked. It runs frequently. |
+
+-----
+
+### 3\. Destruction Phase (Cleanup)
+
+| Hook | When it runs | Purpose |
+| :--- | :--- | :--- |
+| **`ngOnDestroy()`** | Called **just before** Angular destroys the component or directive. | Use this for **cleanup**. This is crucial for unsubscribing from Observables, detaching event handlers, or clearing intervals/timers to prevent memory leaks. |
+
+-----
+
+## 🗂️ View vs. Content
+
+The distinction between **View** and **Content** explains why you have two sets of "After Init" and "After Checked" hooks (`ngAfter**Content**Init`/Checked and `ngAfter**View**Init`/Checked).
+
+### 1\. Component's View (The "View")
+
+The **View** refers to the **HTML template defined inside the component's own file** (the one you link to in the `@Component` decorator's `templateUrl` or `template` property). This also includes any child components *declared* within that template.
+
+  * You access elements in the View using `@ViewChild()` or `@ViewChildren()`.
+  * Hooks related to this are: `ngAfterViewInit()` and `ngAfterViewChecked()`.
+
+### 2\. Projected Content (The "Content")
+
+The **Content** refers to the **external HTML** that a parent component passes into this component's template. This is done using the `<ng-content>` element, a concept known as **Content Projection**.
+
+Imagine you have a `<my-card>` component.
+
+```html
+<my-card>
+    <h2>Card Title</h2>
+    <p>Some external text.</p>
+</my-card>
+```
+
+```html
+<div class="card">
+    <ng-content></ng-content>
+    <button>Close</button>
+</div>
+```
+
+  * You access elements in the Content using `@ContentChild()` or `@ContentChildren()`.
+  * Hooks related to this are: `ngAfterContentInit()` and `ngAfterContentChecked()`.
+
+**Key Takeaway:**
+
+  * **View** = Everything defined **inside** the component's own template.
+  * **Content** = Everything passed **into** the component from its parent via `<ng-content>`.
