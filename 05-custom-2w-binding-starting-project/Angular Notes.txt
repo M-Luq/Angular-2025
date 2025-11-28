@@ -1,0 +1,21 @@
+How to create a custom two way binding:
+
+Following a naming pattern like this ( Refer rect component ts file)
+
+@Input({required:true}) size!: {
+    width:string,
+    height:string
+  }
+
+  @Output() sizeChange = new EventEmitter<{
+    width:string,
+    height:string
+  }>();
+
+  we can create custom two way binding property [(size)] (refer rect html)
+
+
+  In modern version ang v17 or > 
+
+  size = model()
+  
