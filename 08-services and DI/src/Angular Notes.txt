@@ -1,0 +1,82 @@
+This is a comprehensive summary of Angular's Dependency Injection (DI) system, covering service creation, scoping, the injector hierarchy, and advanced provider configuration.
+
+Here is a clear, consolidated note based on all the provided information.
+
+-----
+
+## 🅰️ Angular Dependency Injection (DI) System Notes
+
+Dependency Injection (DI) is a core Angular pattern that provides dependencies (like services or configuration values) to classes that request them, ensuring **reusability** and **shared instances (singletons)**.
+
+### 1\. Services and the `@Injectable` Decorator
+
+  * **Service Purpose:** Encapsulate and share **logic** and/or **data**.
+  * **Service Creation:** You **must** mark a service class with the **`@Injectable()`** decorator to tell Angular that it can be injected.
+  * **Scoping with `providedIn`:**
+      * **`providedIn: 'root'` (Recommended):** Registers the service with the **Application Root EnvironmentInjector**. This creates a single **singleton instance** accessible anywhere in the application. This is the **most common setting** for application-wide services.
+
+### 2\. Requesting a Dependency (Injection)
+
+You do not use `new` to create a service; you request it, and Angular injects it.
+
+| Method | Syntax | Location | Notes |
+| :--- | :--- | :--- | :--- |
+| **Constructor** (Recommended) | `constructor(private tasksService: TasksService)` | Component, Directive, or Service Constructor | The `private` (or `public`) access modifier is a TypeScript shortcut that both requests the service and creates a private property on the class. |
+| **`inject` function** (Modern) | `const tasksService = inject(TasksService);` | Component/Service body (outside constructor) | Modern, easier to read, and works in any injection context. |
+
+### 3\. The Injector Hierarchy and Search Path
+
+Angular uses a hierarchy of Injectors (registries) to fulfill dependency requests.
+
+| Injector Name | Scope/Registration Point | Scoping Impact |
+| :--- | :--- | :--- |
+| **Platform Injector** | Highest level | For singletons shared across multiple separate Angular apps on the same page (Advanced). |
+| **Application Root / EnvironmentInjector** | `providedIn: 'root'` or `bootstrapApplication` `providers` array. | **Global Singleton.** Available throughout the entire application. |
+| **Element Injector** | Component/Directive `providers` array. | **Scoped Instance.** A new instance is created for that component and shared only with its immediate children. |
+| **NullInjector** | N/A | If the dependency search reaches this, it **throws an error** (No provider for...). |
+
+**Search Path:** A component checks its **Element Injector** first, then moves up the tree (Root $\rightarrow$ Platform $\rightarrow$ NullInjector).
+
+-----
+
+## 🧪 Advanced Providers and Custom Injection Tokens
+
+The DI system identifies dependencies using an **Injection Token**. While Angular uses the **Class Name** as the token by default, you can use a custom $\text{InjectionToken}$ to provide **non-class values** (like an array or a configuration object).
+
+### 1\. The Provider Object
+
+All dependency registrations resolve to a **Provider Object** containing two keys:
+
+1.  **`provide`**: The **Injection Token** (the key/identifier).
+2.  A **`use*` property**: Defines how to obtain the value.
+
+### 2\. Custom Injection Token
+
+Used for providing values other than classes, such as arrays or configuration objects.
+
+```typescript
+import { InjectionToken } from '@angular/core';
+
+// Add the generic type (<T>) for TypeScript safety
+export const TASK_STATUS_OPTIONS = new InjectionToken<TaskStatusOptionItem[]>('task-status-options-description');
+```
+
+### 3\. Provider Value Definitions (`use*` Properties)
+
+| Property | Use Case | Example |
+| :--- | :--- | :--- |
+| **`useClass`** | Provides an instance of a **class**. | `{ provide: TasksServiceToken, useClass: TasksService }` |
+| **`useValue`** | Provides a **static, constant value** (array, string, number). | `{ provide: TASK_STATUS_OPTIONS, useValue: TaskStatusOptionArray }` |
+| **`useFactory`** | Provides a value from a **function** that can generate it dynamically (and potentially inject dependencies itself). | `{ provide: CONFIG_TOKEN, useFactory: createConfig }` |
+
+### 4\. Injecting the Custom Value
+
+When using a custom token, you must pass the token to the `inject` function or the `@Inject` decorator in the constructor.
+
+```typescript
+// Using the inject function (Recommended)
+taskStatusOptions = inject(TASK_STATUS_OPTIONS); 
+
+// Using the constructor (@Inject is REQUIRED for custom tokens)
+constructor(@Inject(TASK_STATUS_OPTIONS) private options: TaskStatusOptionItem[]) {}
+```
