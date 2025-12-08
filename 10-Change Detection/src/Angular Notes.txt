@@ -1,0 +1,171 @@
+That's a great idea! Learning Angular's change detection is much easier when the concepts are broken down.
+
+Here are beginner-friendly notes to explain Angular's default change detection, its performance implications, and the solutions.
+
+---
+
+## 💡 Angular Change Detection: The Beginner's Guide
+
+### 1. What is Change Detection (CD)?
+
+**Change Detection** is Angular's way of keeping your screen (the HTML/DOM) in sync with your application's data.
+
+* **The Job:** When your data changes (e.g., a counter increments, or new data arrives from a server), CD figures out *what* on the screen needs to be updated and then updates it.
+
+### 2. The Default Mechanism: Zone.js and The Full Scan
+
+By default, Angular uses a library called **Zone.js** to know when to start checking for changes.
+
+#### A. The Trigger (How Angular Knows)
+
+Angular wraps your entire app in a **"Zone."** This Zone acts like a bodyguard that watches for events that might change your data.
+
+* **Triggers:** Any time you do something asynchronous, like:
+    * **User Clicks** 🖱️
+    * **HTTP Requests** (getting data from an API)
+    * **Timers** (`setTimeout`, `setInterval`)
+* When a trigger happens, Zone.js tells Angular: "**Hey, something changed! Start checking!**"
+
+#### B. The Checking Process (The "Full Scan")
+
+Once triggered, Angular performs a **full scan** of your application's components.
+
+* Angular visits **every single component** in the app, from the top component down to the very last one. 
+* For each component, it checks all the **template bindings** (like `{{ yourVariable }}` or `[property]="value"`).
+* If a binding's value is different from what was on the screen before, Angular updates the screen's HTML.
+
+---
+
+## ⚠️ Performance and The Double Check
+
+### 3. The Performance Problem
+
+Because the default CD performs a **full scan** on every single event, it can lead to unnecessary work.
+
+* **Example:** If you have 100 components, and a click only changes a counter in one component, Angular *still* visits and checks all 100 components.
+* **The Rule:** The frequently Angular runs, the faster your code needs to be.
+
+> **Best Practice:** You must **never** put **expensive calculations** inside your template bindings (like complex filtering inside `{{ aGetterFunction() }}`). These functions will run constantly, slowing down your app.
+
+### 4. Why Does it Check Twice? (Development Mode)
+
+You noticed Angular runs CD twice, causing double logs. This is a special rule for **Development Mode** (it's off in production).
+
+* **The Goal:** Enforce **Unidirectional Data Flow** (data must flow from Parent to Child).
+* **The Checks:**
+    1.  **Run 1:** Detects changes and updates the DOM.
+    2.  **Run 2 (Immediate Check):** Re-evaluates all bindings.
+* **The Error:** If the value of a binding is different in Run 2 than it was in Run 1, Angular throws the **`ExpressionChangedAfterItHasBeenCheckedError`**. This means a component tried to change a value *after* its child was already checked, which violates the flow and causes instability.
+
+---
+
+## 🎯 The Solution: Alternative Change Detection
+
+To fix the performance issue of constantly checking every component, Angular offers a powerful optimization called **`ChangeDetectionStrategy.OnPush`**.
+
+### 5. Strategy: `OnPush`
+
+When you set a component to use `OnPush`, you are telling Angular: **"Don't check this component unless you absolutely have to."**
+
+A component using `OnPush` will **ONLY** be checked if one of the following two things happens:
+
+1.  **The component's `@Input()` properties change** (and the new value is a **new reference**—e.g., a new array or object, not just a modification to an existing one).
+2.  **An event is triggered *within* the component itself** (e.g., a button click inside the `OnPush` component).
+
+* **The Result:** You stop the full scan dead in its tracks. If a change happens high up in the component tree, but a component lower down is marked `OnPush` and none of its inputs changed, **Angular skips the entire component and all its children!**
+
+| Default Strategy | `OnPush` Strategy |
+| :--- | :--- |
+| **Checks everything** on almost every event. | **Checks only when** its data inputs change or a local event happens. |
+| **Less** work for the developer. | **More** work for the developer (must ensure new data references are passed). |
+| **Slower** performance for large apps. | **Much faster** performance. |
+
+This is the key to building large, performant Angular applications!
+
+That's a great idea! Learning Angular's change detection is much easier when the concepts are broken down.
+
+Here are beginner-friendly notes to explain Angular's default change detection, its performance implications, and the solutions.
+
+---
+
+## 💡 Angular Change Detection: The Beginner's Guide
+
+### 1. What is Change Detection (CD)?
+
+**Change Detection** is Angular's way of keeping your screen (the HTML/DOM) in sync with your application's data.
+
+* **The Job:** When your data changes (e.g., a counter increments, or new data arrives from a server), CD figures out *what* on the screen needs to be updated and then updates it.
+
+### 2. The Default Mechanism: Zone.js and The Full Scan
+
+By default, Angular uses a library called **Zone.js** to know when to start checking for changes.
+
+#### A. The Trigger (How Angular Knows)
+
+Angular wraps your entire app in a **"Zone."** This Zone acts like a bodyguard that watches for events that might change your data.
+
+* **Triggers:** Any time you do something asynchronous, like:
+    * **User Clicks** 🖱️
+    * **HTTP Requests** (getting data from an API)
+    * **Timers** (`setTimeout`, `setInterval`)
+* When a trigger happens, Zone.js tells Angular: "**Hey, something changed! Start checking!**"
+
+#### B. The Checking Process (The "Full Scan")
+
+Once triggered, Angular performs a **full scan** of your application's components.
+
+* Angular visits **every single component** in the app, from the top component down to the very last one. 
+* For each component, it checks all the **template bindings** (like `{{ yourVariable }}` or `[property]="value"`).
+* If a binding's value is different from what was on the screen before, Angular updates the screen's HTML.
+
+---
+
+## ⚠️ Performance and The Double Check
+
+### 3. The Performance Problem
+
+Because the default CD performs a **full scan** on every single event, it can lead to unnecessary work.
+
+* **Example:** If you have 100 components, and a click only changes a counter in one component, Angular *still* visits and checks all 100 components.
+* **The Rule:** The frequently Angular runs, the faster your code needs to be.
+
+> **Best Practice:** You must **never** put **expensive calculations** inside your template bindings (like complex filtering inside `{{ aGetterFunction() }}`). These functions will run constantly, slowing down your app.
+
+### 4. Why Does it Check Twice? (Development Mode)
+
+You noticed Angular runs CD twice, causing double logs. This is a special rule for **Development Mode** (it's off in production).
+
+* **The Goal:** Enforce **Unidirectional Data Flow** (data must flow from Parent to Child).
+* **The Checks:**
+    1.  **Run 1:** Detects changes and updates the DOM.
+    2.  **Run 2 (Immediate Check):** Re-evaluates all bindings.
+* **The Error:** If the value of a binding is different in Run 2 than it was in Run 1, Angular throws the **`ExpressionChangedAfterItHasBeenCheckedError`**. This means a component tried to change a value *after* its child was already checked, which violates the flow and causes instability.
+
+---
+
+## 🎯 The Solution: Alternative Change Detection
+
+To fix the performance issue of constantly checking every component, Angular offers a powerful optimization called **`ChangeDetectionStrategy.OnPush`**.
+
+### 5. Strategy: `OnPush`
+
+When you set a component to use `OnPush`, you are telling Angular: **"Don't check this component unless you absolutely have to."**
+
+A component using `OnPush` will **ONLY** be checked if one of the following two things happens:
+
+1.  **The component's `@Input()` properties change** (and the new value is a **new reference**—e.g., a new array or object, not just a modification to an existing one).
+2.  **An event is triggered *within* the component itself** (e.g., a button click inside the `OnPush` component).
+
+* **The Result:** You stop the full scan dead in its tracks. If a change happens high up in the component tree, but a component lower down is marked `OnPush` and none of its inputs changed, **Angular skips the entire component and all its children!**
+
+| Default Strategy | `OnPush` Strategy |
+| :--- | :--- |
+| **Checks everything** on almost every event. | **Checks only when** its data inputs change or a local event happens. |
+| **Less** work for the developer. | **More** work for the developer (must ensure new data references are passed). |
+| **Slower** performance for large apps. | **Much faster** performance. |
+
+This is the key to building large, performant Angular applications!
+
+avoiding zone pollution - refer concept in network 
+
+changeDetection:ChangeDetectionStrategy.OnPush, - you can also use this to stop component specific change detection
