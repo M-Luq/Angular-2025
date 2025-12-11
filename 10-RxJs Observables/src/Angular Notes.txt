@@ -1,0 +1,111 @@
+Day 22
+
+Observable are stream of object that produces stream of data 
+
+This is a fantastic, hands-on explanation of creating and subscribing to an RxJS Observable using the `interval` function.
+
+Here are the complete, beginner-friendly notes based on your detailed lecture, formatted as a document with relevant examples and diagrams.
+
+-----
+
+# ⚛️ Working with RxJS Observables
+
+This section explores how to create and use Observables in Angular using the RxJS library, focusing on a non-Subject approach.
+
+## 1\. Observables: The Core Concept
+
+An **Observable** represents a stream of values delivered over time. These values can be anything: a single HTTP response, a series of mouse movements, or a continuous timer tick.
+
+### Observable Creation Methods
+
+RxJS provides various functions to create Observables:
+
+  * **Subjects (e.g., `BehaviorSubject`):** Observables that act as event emitters. You manually call `.next()` to emit values, and they can be subscribed to by multiple parts of the application.
+  * **Creation Functions (e.g., `interval`, `from`, `of`):** Functions that automatically generate the stream of values based on their configuration.
+
+## 2\. Creating an Observable with `interval`
+
+The `interval()` function creates an Observable that emits a sequence of incrementing numbers after a specified time interval.
+
+### Example: Using `interval`
+
+We use `interval` inside the `ngOnInit` lifecycle hook to start the stream when the component loads.
+
+```typescript
+// app.component.ts
+import { Component, OnInit, inject, DestroyRef } from '@angular/core';
+import { interval, Subscription } from 'rxjs'; // 1. Import interval and Subscription
+
+@Component({
+  // ...
+})
+export class AppComponent implements OnInit {
+  // Store the ongoing connection
+  private timerSubscription: Subscription; 
+  // Inject Angular's cleanup utility
+  private destroyRef = inject(DestroyRef); 
+
+  ngOnInit() {
+    // 2. Create the Observable stream
+    const timerObservable = interval(1000); // Emits a value every 1000ms (1 second)
+
+    // Observables are LAZY: Nothing happens until you subscribe.
+    
+    // 3. Set up the Subscription (kicks off the stream)
+    this.timerSubscription = timerObservable.subscribe({
+      next: (value) => {
+        // This runs every time the Observable emits a new value
+        console.log("Interval Tick:", value); 
+      },
+      complete: () => {
+        // Runs if the Observable stream successfully stops (e.g., after an 'of' Observable)
+        console.log("Stream completed."); 
+      },
+      error: (error) => {
+        // Runs if an error occurs during the stream execution
+        console.error("Stream Error:", error);
+      }
+    });
+
+    // 4. Register the cleanup hook
+    this.destroyRef.onDestroy(() => {
+        // Clean up when the component is removed from the DOM
+        this.timerSubscription.unsubscribe();
+        console.log("Subscription unsubscribed.");
+    });
+  }
+}
+```
+
+## 3\. The Anatomy of Subscription
+
+The `.subscribe()` method connects your component to the Observable and starts the value production. It accepts an **Observer** object with three optional methods:
+
+| Method | When it is called | Use Case |
+| :--- | :--- | :--- |
+| **`next`** | Called every time the Observable successfully emits a new value. | Handling data, updating the UI, or logging the value. |
+| **`complete`** | Called when the Observable stream has finished and will emit no more values. | Clean-up, showing a success message (e.g., after an HTTP request). |
+| **`error`** | Called if the Observable encounters an error. | Handling API failures or unexpected stream issues. |
+
+## 4\. 🧹 Essential Cleanup: Unsubscribing
+
+Just like we learned with Subjects, it is crucial to clean up an Observable subscription when the component is destroyed.
+
+### Why Cleanup is Needed
+
+If you do not call `.unsubscribe()` on an ongoing stream (like `interval`), the component will remain in memory, leading to a **memory leak**, even after the user navigates away from the page.
+
+### Cleanup Method: `DestroyRef`
+
+In modern Angular, the `DestroyRef` utility provides a clean, declarative way to register cleanup logic directly inside the component's setup.
+
+1.  **Inject:** `private destroyRef = inject(DestroyRef);`
+2.  **Register:** `this.destroyRef.onDestroy(() => { this.timerSubscription.unsubscribe(); });`
+
+This ensures that the subscription is terminated when Angular removes the component from the DOM.
+
+
+Operators in RxJS
+
+functions you can pipe into your observable data stream to perform transformations or any other kind
+of operation on those observable values.
