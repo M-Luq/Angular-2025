@@ -1,0 +1,21 @@
+To send a request we should use httpCllient and to use this we have give in in main ts as provideHttpClient() in providers array  or
+in older versions you can give in providers array of the root module.
+
+this has funtions  like get,post etc which is observable that creates a blueprint for the actual get request and we need to subscribe to trigger this request 
+
+they can emit one value by default
+
+so we can give the type of data we receive from backend 
+
+and we can give another argument as observe which has response and events 
+
+here response will get data along with httpresponse so the data will be in body and the events will also has the httpresponse but we can see the lifecycle of the request and the response.
+
+
+
+catchError is not like map that return data but it should return a observable so we should use throwError which is also given by rxjs
+
+
+
+
+
