@@ -5,6 +5,7 @@ import { PlacesComponent } from '../places.component';
 import { HttpClient } from '@angular/common/http';
 import { Place } from '../place.model';
 import { catchError, map, throwError } from 'rxjs';
+import { PlacesService } from '../places.service';
 
 @Component({
   selector: 'app-user-places',
@@ -14,25 +15,16 @@ import { catchError, map, throwError } from 'rxjs';
   imports: [PlacesContainerComponent, PlacesComponent],
 })
 export class UserPlacesComponent implements OnInit {
-  places = signal<Place[] | undefined>(undefined);
+  
     error = signal('');
     isFetching = signal(false);
-    private httpClient  = inject(HttpClient);
+    private placesService = inject(PlacesService);
     private destroyRef = inject(DestroyRef)
+    places = this.placesService.loadedUserPlaces;
 
    ngOnInit(){
       this.isFetching.set(true);
-      const subscription = this.httpClient.get<{places: Place[]}>('http://localhost:3002/user-places')
-      .pipe(
-        map((resData) => resData.places,
-      catchError((error) => {
-        console.log(error);
-        return throwError(() => new Error('Something went wrong!'));
-      }))
-      ).subscribe({
-        next: (places) => {
-          this.places.set(places);
-        },
+      const subscription = this.placesService.loadUserPlaces().subscribe({
         error: (error:Error) =>{
           this.error.set(error.message);
         },
@@ -45,5 +37,14 @@ export class UserPlacesComponent implements OnInit {
         subscription.unsubscribe();
       });
   
+    }
+
+    onRemovePlace(selectedPlace:Place){
+
+      const subscription = this.placesService.removeUserPlace(selectedPlace).subscribe();
+
+      this.destroyRef.onDestroy(() => {
+        subscription.unsubscribe();
+      });
     }
 }
