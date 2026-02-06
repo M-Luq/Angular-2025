@@ -524,3 +524,323 @@ export class TasksComponent {
 
 > Using `.subscribe()` on `queryParams` is perfect for **performing actions** (like calling an API) whenever a parameter changes. If you only need the value to **display or filter data** in the UI, using **Signal Inputs** or `toSignal` is generally more efficient and requires less "cleanup" code.
 
+
+Here are your enhanced notes on handling Static and Dynamic data in Angular Routing.
+
+---
+
+## 1. Static Data: The `data` Property
+
+The `data` property is used for passing fixed information to a route that doesn't change based on user input or API calls (e.g., page titles, breadcrumbs, or feature flags).
+
+### Implementation
+
+In your route configuration, you define an object for the `data` property:
+
+```typescript
+{
+  path: 'users/:userId',
+  component: UserTasksComponent,
+  data: {
+    message: "Hello!" // Static data
+  }
+}
+
+```
+
+### Accessing Static Data
+
+* **Traditional Method:** Inject `ActivatedRoute` and access `this.route.snapshot.data['message']`.
+* **Modern Method (Input Binding):** If you enable `withComponentInputBinding()` in your `provideRouter` config, you can treat route data as a standard `@Input`.
+
+```typescript
+// Inside UserTasksComponent
+@Input() message?: string; 
+
+```
+
+---
+
+## 2. Dynamic Data: The `resolve` Property
+
+Resolvers are used to fetch data **before** a component is even loaded. This ensures the UI doesn't flicker or show "undefined" states while waiting for a service.
+
+### Defining a Resolver Function
+
+The modern approach uses the `ResolveFn`. It has access to the `ActivatedRouteSnapshot` to grab route parameters.
+
+```typescript
+export const resolveUserName: ResolveFn<string> = (
+  activatedRoute: ActivatedRouteSnapshot, 
+  routerState: RouterStateSnapshot
+) => {
+  const usersService = inject(UsersService); // Manual injection inside functions
+  const userId = activatedRoute.paramMap.get('userId');
+  
+  return usersService.users.find(u => u.id === userId)?.name || 'Guest';
+};
+
+```
+
+### Registering the Resolver
+
+Add the `resolve` property to your route. It takes an object where keys are the names of the data properties you want to pass to the component.
+
+```typescript
+{
+  path: 'users/:userId',
+  component: UserTasksComponent,
+  resolve: {
+    userName: resolveUserName // Key 'userName' matches the @Input name
+  }
+}
+
+```
+
+---
+
+## 3. Alternative: Manual Subscription (The "Old" Way)
+
+Before Resolvers or Input Binding became the standard, we manually subscribed to `paramMap` inside `ngOnInit`. While functional, it requires more "boilerplate" and manual cleanup.
+
+| Feature | Resolver Method | Manual Subscription |
+| --- | --- | --- |
+| **UX** | Component waits for data before displaying. | Component displays immediately (may need loaders). |
+| **Complexity** | Cleaner component logic. | Requires `Subscription` and `OnDestroy` logic. |
+| **Data Flow** | Data is ready on "arrival." | Data arrives asynchronously after the component loads. |
+
+> **Note:** Your commented-out code shows the manual subscription method. While it works, using the `resolve` property (as shown in your `resolveUserName` function) is the preferred Angular pattern for cleaner components.
+
+---
+
+### Comparison Table: Data vs. Resolve
+
+| Property | Type of Data | When is it fetched? |
+| --- | --- | --- |
+| **`data`** | **Static** (Hardcoded strings/objects) | Available instantly when the route is matched. |
+| **`resolve`** | **Dynamic** (Fetched from Service/API) | Fetched **during** the navigation transition. |
+
+---
+Here are your enhanced notes covering **Class-based Resolvers**, **Manual Data Retrieval**, and **Dynamic Page Titles**.
+
+---
+
+## 1. Class-Based Resolvers (Deprecated)
+
+Before functional resolvers (the current standard), Angular used class-based resolvers that implement the `Resolve<T>` interface.
+
+### Implementation
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class UserNameResolver implements Resolve<string> {
+  constructor(private usersService: UsersService) {}
+
+  resolve(activatedRoute: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
+    return this.usersService.users.find(
+      (u) => u.id === activatedRoute.paramMap.get('userId')
+    )?.name || '';
+  }
+}
+
+```
+
+### Usage in Route Configuration
+
+Instead of passing a function, you pass the class reference:
+
+```typescript
+{
+  path: 'users/:userId',
+  component: UserTasksComponent,
+  resolve: { userName: UserNameResolver } // Angular injects the class automatically
+}
+
+```
+
+> **Warning:** This approach is **deprecated**. Always prefer **Functional Resolvers** (using `ResolveFn`) in modern Angular (v15+) because they are lighter and support `inject()` directly.
+
+---
+
+## 2. Manual Data Access (Without Input Binding)
+
+If you don't want to use `withComponentInputBinding()`, you can access both **Static (`data`)** and **Dynamic (`resolve`)** information through the `ActivatedRoute` service. Both types of data are merged into a single `data` observable.
+
+```typescript
+export class UserTasksComponent implements OnInit {
+  constructor(private activatedRoute: ActivatedRoute) {}
+
+  ngOnInit() {
+    // Accessing the snapshot (non-reactive)
+    const staticMsg = this.activatedRoute.snapshot.data['message'];
+    const resolvedName = this.activatedRoute.snapshot.data['userName'];
+
+    // Accessing via Observable (reactive to changes)
+    this.activatedRoute.data.subscribe(data => {
+      console.log(data['message']);  // Static
+      console.log(data['userName']); // Dynamic
+    });
+  }
+}
+
+```
+
+---
+
+## 3. Controlling Resolver Execution
+
+By default, resolvers only re-run when **Route Parameters** change (e.g., `:userId`). They do **not** re-run if only **Query Parameters** (e.g., `?sort=desc`) change.
+
+To change this behavior, use the `runGuardsAndResolvers` property:
+
+| Value | Behavior |
+| --- | --- |
+| `paramsChange` (Default) | Re-runs only if path parameters change. |
+| `paramsOrQueryParamsChange` | Re-runs if `:userId` OR `?query` changes. |
+| `always` | Re-runs every time the route is technically "activated," even if the parameters are the same. |
+
+**Example:**
+
+```typescript
+{
+  path: 'users/:userId',
+  component: UserTasksComponent,
+  resolve: { userName: resolveUserName },
+  runGuardsAndResolvers: 'always' // Force refresh
+}
+
+```
+
+---
+
+## 4. Resolving Page Titles
+
+Angular provides a built-in way to update the browser tab title dynamically.
+
+### Static Title
+
+```typescript
+{
+  path: 'settings',
+  component: SettingsComponent,
+  title: 'User Settings' // Tab shows: User Settings
+}
+
+```
+
+### Dynamic Title (Using ResolveFn)
+
+You can use a function to generate a title based on route data:
+
+```typescript
+export const resolveTitle: ResolveFn<string> = (route) => {
+  return `Profile of ${route.paramMap.get('userId')}`;
+};
+
+// In Route:
+{
+  path: 'users/:userId',
+  component: UserTasksComponent,
+  title: resolveTitle // Tab shows: Profile of 123
+}
+
+```
+
+Implementing Route Guards allows you to control whether a user can navigate to, stay on, or leave a specific part of your application. While `canActivate` is common, `canMatch` is often considered more versatile for advanced routing scenarios.
+
+---
+
+## 1. The Versatile `canMatch` Guard
+
+`canMatch` is powerful because it determines if a route should even be considered. If it returns `false`, Angular acts as if that route doesn't exist and keeps looking for other matches in the configuration.
+
+### Functional Implementation (Modern)
+
+This is the recommended approach. It takes the `Route` object and `UrlSegment[]`.
+
+```typescript
+export const canMatchTeam: CanMatchFn = (route, segments) => {
+  const router = inject(Router);
+  const shouldAccess = Math.random() > 0.5;
+
+  if (shouldAccess) {
+    return true;
+  }
+  // Use RedirectCommand to send users elsewhere
+  return new RedirectCommand(router.parseUrl('/unauthorized'));
+};
+
+```
+
+### Why use `canMatch` over `canActivate`?
+
+* **Multiple Routes for one Path:** You can define the same path twice with different guards (e.g., an Admin Dashboard and a User Dashboard on the same URL).
+* **Performance:** It prevents the router from even attempting to load component code if the conditions aren't met.
+
+---
+
+## 2. Preventing Data Loss: `canDeactivate`
+
+This guard is triggered when a user tries to **leave** a route. It’s perfect for "Unsaved Changes" warnings.
+
+### Implementation Example
+
+```typescript
+export const canLeaveEditPage: CanDeactivateFn<NewTaskComponent> = (component) => {
+  if (component.hasUnsavedChanges()) {
+    return window.confirm("You have unsaved changes. Do you really want to leave?");
+  }
+  return true;
+};
+
+```
+
+---
+
+## 3. Class-Based Guards (Legacy)
+
+As you noted, these are **deprecated**. They require more boilerplate because you must implement an interface and provide the class in the root injector.
+
+```typescript
+@Injectable({ providedIn: 'root' })
+class CanMatchTeamSection implements CanMatch {
+  constructor(private router: Router) {}
+  canMatch(route: Route, segments: UrlSegment[]) {
+    // Logic here...
+    return true; 
+  }
+}
+
+```
+
+**Route Configuration for both types:**
+
+```typescript
+{
+  path: 'tasks/new',
+  component: NewTaskComponent,
+  canMatch: [canMatchTeam],     // Functional
+  canDeactivate: [canLeaveEditPage] // Functional
+}
+
+```
+
+---
+
+## 4. Summary of Guard Types
+
+| Guard | Purpose | Common Use Case |
+| --- | --- | --- |
+| **`canMatch`** | Can this route be used at all? | Feature flagging or Role-based pathing. |
+| **`canActivate`** | Can the user access this page? | Basic Authentication checks. |
+| **`canActivateChild`** | Can the user access child routes? | Protecting an entire administrative section. |
+| **`canDeactivate`** | Can the user leave this page? | "Discard changes?" confirmation dialogs. |
+
+---
+
+### Pro-Tip: The `RedirectCommand`
+
+In modern Angular, you no longer need to manually call `router.navigate()` inside a guard and return `false`. You can simply return a `RedirectCommand(UrlTree)`, which tells Angular: "Don't just stop navigation, go here instead."
+
+
+
