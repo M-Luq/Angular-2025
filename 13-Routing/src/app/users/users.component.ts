@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 
 import { UserComponent } from './user/user.component';
 import { UsersService } from './users.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-users',
@@ -13,4 +14,5 @@ import { UsersService } from './users.service';
 export class UsersComponent {
   private usersService = inject(UsersService);
   users = this.usersService.users;
+  
 }
