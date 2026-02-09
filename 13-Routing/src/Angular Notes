@@ -842,5 +842,48 @@ class CanMatchTeamSection implements CanMatch {
 
 In modern Angular, you no longer need to manually call `router.navigate()` inside a guard and return `false`. You can simply return a `RedirectCommand(UrlTree)`, which tells Angular: "Don't just stop navigation, go here instead."
 
+In Angular, simply calling `Maps` to the same URL often does nothing because the router sees you are already "there." The combination of code you've provided is the standard "recipe" to force a component to refresh or re-trigger logic without a full browser page reload.
+
+Here is the breakdown of why each piece is essential:
+
+---
+
+### 1. `relativeTo: this.activatedRoute`
+
+By default, `router.navigate` treats paths as absolute (starting from the root).
+
+* **The "Why":** Using `./` combined with `relativeTo` tells Angular, "Stay exactly where I am right now." It ensures the navigation targets the current route configuration rather than trying to find a route named `./` at the root level.
+
+### 2. `onSameUrlNavigation: 'reload'`
+
+By default, the Angular Router ignores navigation requests if the target URL is the same as the current one.
+
+* **The "Why":** This flag tells the router to process the navigation even if the URL hasn't changed. However, **this alone won't restart your component**—it only tells the router to "try again." You need the next piece of the puzzle to actually execute the logic.
+
+### 3. `queryParamsHandling: 'preserve'`
+
+* **The "Why":** If your current URL has search filters or IDs (e.g., `?page=2&sort=desc`), navigating to `./` would normally wipe them out. This setting ensures those parameters stay in the URL bar during the "reload."
+
+### 4. `runGuardsAndResolvers: 'always'`
+
+This is placed in your **Route Configuration** (the `app-routing.module.ts`), not the navigate call itself.
+
+* **The "Why":** Even if you set `onSameUrlNavigation: 'reload'`, Angular is efficient—it won't re-run your Data Resolvers or Guards if it thinks the route hasn't changed.
+* By setting this to `'always'`, you force Angular to re-fetch data from your Resolvers and check your Guards, which is usually what triggers the "refresh" effect in your component UI.
+
+---
+
+### How they work together
+
+| Feature | Role |
+| --- | --- |
+| **`Maps(['./'])`** | The trigger: "Go to myself." |
+| **`onSameUrlNavigation`** | The permission: "Allow navigation to the current URL." |
+| **`runGuardsAndResolvers`** | The action: "Actually re-run the data-fetching logic." |
+
+**A quick tip:** If your component logic is inside `ngOnInit`, it still might not run again because the component isn't being destroyed and recreated. You may need to subscribe to `activatedRoute.data` or `router.events` to react to the "reload."
+
+
+
 
 
